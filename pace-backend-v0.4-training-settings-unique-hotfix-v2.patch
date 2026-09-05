@@ -1,0 +1,12 @@
+diff --git a/alembic/versions/0003_strength_training.py b/alembic/versions/0003_strength_training.py
+index 08d7787..7112f41 100644
+--- a/alembic/versions/0003_strength_training.py
++++ b/alembic/versions/0003_strength_training.py
+@@ -58,7 +58,6 @@ def upgrade() -> None:
+         sa.CheckConstraint("default_working_rest_seconds >= 0", name="ck_training_settings_working_rest"),
+         sa.ForeignKeyConstraint(["user_id"], ["pace_users.id"], ondelete="CASCADE"),
+         sa.PrimaryKeyConstraint("id"),
+-        sa.UniqueConstraint("user_id"),
+     )
+     op.create_index("ix_training_settings_user_id", "training_settings", ["user_id"], unique=True)
+ 

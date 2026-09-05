@@ -1,0 +1,171 @@
+{
+  "info": {
+    "name": "Pace Backend v0.4 - Strength Training",
+    "_postman_id": "pace-backend-v0-4-strength",
+    "description": "Strength Training API requests for Pace Backend v0.4.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Training Settings",
+      "item": [
+        {
+          "name": "Get Settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/training/settings"
+          }
+        },
+        {
+          "name": "Update Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"default_warmup_rest_seconds\": 60,\n  \"default_working_rest_seconds\": 150,\n  \"effort_mode\": \"rir\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/training/settings"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Exercises",
+      "item": [
+        {
+          "name": "Create Exercise",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "pm.environment.set('training_exercise_id', data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Conventional Deadlift\",\n  \"exercise_type\": \"weighted\",\n  \"primary_muscle\": \"Hamstrings\",\n  \"equipment\": \"Barbell\",\n  \"is_favorite\": true\n}"
+            },
+            "url": "{{base_url}}/api/v1/training/exercises"
+          }
+        },
+        {
+          "name": "List Exercises",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/training/exercises"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Templates",
+      "item": [
+        {
+          "name": "Create Template",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "pm.environment.set('training_template_id', data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Deadlift Day\",\n  \"exercises\": [\n    {\n      \"exercise_id\": \"{{training_exercise_id}}\",\n      \"position\": 0,\n      \"sets\": [\n        {\n          \"position\": 0,\n          \"set_type\": \"warmup\",\n          \"target_reps\": 5,\n          \"target_weight\": 40,\n          \"weight_unit\": \"kg\"\n        },\n        {\n          \"position\": 1,\n          \"set_type\": \"working\",\n          \"target_reps\": 5,\n          \"target_weight\": 80,\n          \"weight_unit\": \"kg\"\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": "{{base_url}}/api/v1/training/templates"
+          }
+        },
+        {
+          "name": "Get Template",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/training/templates/{{training_template_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sessions",
+      "item": [
+        {
+          "name": "Create Completed Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "pm.environment.set('training_session_id', data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"template_id\": \"{{training_template_id}}\",\n  \"name\": \"Deadlift Session\",\n  \"started_at\": \"2026-09-05T10:00:00+07:00\",\n  \"completed_at\": \"2026-09-05T11:00:00+07:00\",\n  \"exercises\": [\n    {\n      \"exercise_id\": \"{{training_exercise_id}}\",\n      \"position\": 0,\n      \"sets\": [\n        {\n          \"position\": 0,\n          \"set_type\": \"warmup\",\n          \"weight\": 40,\n          \"weight_unit\": \"kg\",\n          \"reps\": 5,\n          \"effort_mode\": \"off\"\n        },\n        {\n          \"position\": 1,\n          \"set_type\": \"working\",\n          \"weight\": 80,\n          \"weight_unit\": \"kg\",\n          \"reps\": 5,\n          \"effort_mode\": \"rir\",\n          \"rir\": 2\n        }\n      ]\n    }\n  ]\n}"
+            },
+            "url": "{{base_url}}/api/v1/training/sessions"
+          }
+        },
+        {
+          "name": "Get Session",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/training/sessions/{{training_session_id}}"
+          }
+        },
+        {
+          "name": "List Sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/training/sessions"
+          }
+        }
+      ]
+    }
+  ]
+}
