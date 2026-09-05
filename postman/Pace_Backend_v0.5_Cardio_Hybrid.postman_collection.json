@@ -1,0 +1,108 @@
+{
+  "info": {
+    "name": "Pace Backend v0.5 - Cardio & Hybrid",
+    "_postman_id": "pace-backend-v0-5-cardio-hybrid",
+    "description": "Cardio and HYROX/Hybrid API requests for Pace Backend v0.5.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Cardio",
+      "item": [
+        {
+          "name": "Create Run",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "pm.environment.set('cardio_activity_id', data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"activity_type\": \"running\",\n  \"name\": \"Easy Run\",\n  \"activity_date\": \"2026-09-05\",\n  \"duration_seconds\": 1800,\n  \"distance_km\": 5,\n  \"notes\": \"Comfortable effort\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/training/cardio/activities"
+          }
+        },
+        {
+          "name": "List Cardio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/training/cardio/activities"
+          }
+        },
+        {
+          "name": "Get Cardio",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/training/cardio/activities/{{cardio_activity_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hybrid",
+      "item": [
+        {
+          "name": "Create HYROX Full",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const data = pm.response.json();",
+                  "pm.environment.set('hybrid_session_id', data.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_type\": \"hyrox_full\",\n  \"name\": \"HYROX Full Simulation\",\n  \"started_at\": \"2026-09-05T10:00:00+07:00\",\n  \"completed_at\": \"2026-09-05T11:20:00+07:00\",\n  \"total_duration_seconds\": 4800,\n  \"segments\": [\n    {\n      \"position\": 0,\n      \"segment_type\": \"run\",\n      \"segment_name\": \"Run 1\",\n      \"target_distance_m\": 1000,\n      \"duration_seconds\": 300\n    },\n    {\n      \"position\": 1,\n      \"segment_type\": \"station\",\n      \"segment_name\": \"SkiErg\",\n      \"station_key\": \"ski_erg\",\n      \"target_distance_m\": 1000,\n      \"duration_seconds\": 260\n    },\n    {\n      \"position\": 2,\n      \"segment_type\": \"run\",\n      \"segment_name\": \"Run 2\",\n      \"target_distance_m\": 1000,\n      \"duration_seconds\": 305\n    },\n    {\n      \"position\": 3,\n      \"segment_type\": \"station\",\n      \"segment_name\": \"Sled Push\",\n      \"station_key\": \"sled_push\",\n      \"target_distance_m\": 50,\n      \"load\": 152,\n      \"load_unit\": \"kg\",\n      \"duration_seconds\": 150\n    }\n  ]\n}"
+            },
+            "url": "{{base_url}}/api/v1/training/hybrid/sessions"
+          }
+        },
+        {
+          "name": "List Hybrid",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/training/hybrid/sessions"
+          }
+        },
+        {
+          "name": "Get Hybrid",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/training/hybrid/sessions/{{hybrid_session_id}}"
+          }
+        }
+      ]
+    }
+  ]
+}

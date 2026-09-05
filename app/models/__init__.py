@@ -1,3 +1,4 @@
+from app.models.endurance import CardioActivity, HybridSegment, HybridSession
 from app.models.nutrition import (
     NutritionEntry,
     NutritionFood,
@@ -19,6 +20,9 @@ from app.models.training import (
 from app.models.user import PaceUser
 
 __all__ = [
+    "CardioActivity",
+    "HybridSegment",
+    "HybridSession",
     "NutritionEntry",
     "NutritionFood",
     "NutritionGoal",
