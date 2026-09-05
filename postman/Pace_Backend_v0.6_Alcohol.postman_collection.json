@@ -1,0 +1,296 @@
+{
+  "info": {
+    "name": "Pace Backend v0.6 - Alcohol",
+    "_postman_id": "pace-backend-v0-6-alcohol",
+    "description": "Alcohol session, drink, water, break, favorite and historical-session API requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Sessions",
+      "item": [
+        {
+          "name": "Create Live Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const d=pm.response.json();",
+                  "pm.environment.set('alcohol_session_id', d.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entry_mode\": \"live\",\n  \"started_at\": \"2026-09-05T18:00:00+07:00\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/alcohol/sessions"
+          }
+        },
+        {
+          "name": "Get Active Session",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/alcohol/sessions/active"
+          }
+        },
+        {
+          "name": "Get Session",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/alcohol/sessions/{{alcohol_session_id}}"
+          }
+        },
+        {
+          "name": "Pause Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"at\": \"2026-09-05T18:40:00+07:00\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/alcohol/sessions/{{alcohol_session_id}}/pause"
+          }
+        },
+        {
+          "name": "Resume Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"at\": \"2026-09-05T18:50:00+07:00\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/alcohol/sessions/{{alcohol_session_id}}/resume"
+          }
+        },
+        {
+          "name": "Complete Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"at\": \"2026-09-05T20:00:00+07:00\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/alcohol/sessions/{{alcohol_session_id}}/complete"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Logging",
+      "item": [
+        {
+          "name": "Add Drink",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const d=pm.response.json();",
+                  "pm.environment.set('alcohol_drink_id', d.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"beer\",\n  \"name\": \"Beer\",\n  \"volume_ml\": 330,\n  \"abv_percent\": 5,\n  \"logged_at\": \"2026-09-05T18:10:00+07:00\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/alcohol/sessions/{{alcohol_session_id}}/drinks"
+          }
+        },
+        {
+          "name": "Add Water",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"volume_ml\": 500,\n  \"container\": \"bottle\",\n  \"logged_at\": \"2026-09-05T18:20:00+07:00\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/alcohol/sessions/{{alcohol_session_id}}/water"
+          }
+        },
+        {
+          "name": "Start Break",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const d=pm.response.json();",
+                  "pm.environment.set('alcohol_break_id', d.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planned_duration_seconds\": 900,\n  \"started_at\": \"2026-09-05T18:25:00+07:00\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/alcohol/sessions/{{alcohol_session_id}}/breaks"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Favorites",
+      "item": [
+        {
+          "name": "Create Favorite",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const d=pm.response.json();",
+                  "pm.environment.set('alcohol_favorite_id', d.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"beer\",\n  \"name\": \"Favorite Beer\",\n  \"brand\": \"Example\",\n  \"volume_ml\": 330,\n  \"abv_percent\": 5\n}"
+            },
+            "url": "{{base_url}}/api/v1/alcohol/favorites"
+          }
+        },
+        {
+          "name": "List Favorites",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{base_url}}/api/v1/alcohol/favorites"
+          }
+        },
+        {
+          "name": "Log Favorite",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": \"{{alcohol_session_id}}\",\n  \"logged_at\": \"2026-09-05T19:00:00+07:00\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/alcohol/favorites/{{alcohol_favorite_id}}/log"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Historical",
+      "item": [
+        {
+          "name": "Create Historical Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const d=pm.response.json();",
+                  "pm.environment.set('alcohol_historical_session_id', d.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entry_mode\": \"historical\",\n  \"historical_date\": \"2026-09-01\"\n}"
+            },
+            "url": "{{base_url}}/api/v1/alcohol/sessions"
+          }
+        },
+        {
+          "name": "Add Historical Drink",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"spirits\",\n  \"name\": \"Whisky\",\n  \"volume_ml\": 30,\n  \"abv_percent\": 40\n}"
+            },
+            "url": "{{base_url}}/api/v1/alcohol/sessions/{{alcohol_historical_session_id}}/drinks"
+          }
+        }
+      ]
+    }
+  ]
+}

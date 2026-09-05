@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = "Pace API"
     app_env: str = "local"
-    app_version: str = "0.5.0"
+    app_version: str = "0.6.0"
     api_v1_prefix: str = "/api/v1"
     database_url: str = "postgresql+psycopg://pace:pace@localhost:5432/pace"
     dev_auth_subject: str = "dev-local-user"

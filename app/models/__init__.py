@@ -1,3 +1,10 @@
+from app.models.alcohol import (
+    AlcoholBreak,
+    AlcoholDrink,
+    AlcoholFavorite,
+    AlcoholSession,
+    AlcoholWaterEntry,
+)
 from app.models.endurance import CardioActivity, HybridSegment, HybridSession
 from app.models.nutrition import (
     NutritionEntry,
@@ -20,6 +27,11 @@ from app.models.training import (
 from app.models.user import PaceUser
 
 __all__ = [
+    "AlcoholBreak",
+    "AlcoholDrink",
+    "AlcoholFavorite",
+    "AlcoholSession",
+    "AlcoholWaterEntry",
     "CardioActivity",
     "HybridSegment",
     "HybridSession",
