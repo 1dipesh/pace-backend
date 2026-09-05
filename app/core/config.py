@@ -6,9 +6,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = "Pace API"
     app_env: str = "local"
-    app_version: str = "0.1.0"
+    app_version: str = "0.3.0"
     api_v1_prefix: str = "/api/v1"
     database_url: str = "postgresql+psycopg://pace:pace@localhost:5432/pace"
+    dev_auth_subject: str = "dev-local-user"
+    dev_user_email: str | None = "dev@pace.local"
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     model_config = SettingsConfigDict(

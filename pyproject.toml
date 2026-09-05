@@ -10,7 +10,7 @@ namespaces = false
 
 [project]
 name = "pace-backend"
-version = "0.1.0"
+version = "0.3.0"
 description = "Backend API for Pace"
 requires-python = ">=3.12,<3.14"
 dependencies = [

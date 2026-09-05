@@ -1,0 +1,2181 @@
+diff --git a/alembic/versions/0002_nutrition.py b/alembic/versions/0002_nutrition.py
+new file mode 100644
+index 0000000..373fcfd
+--- /dev/null
++++ b/alembic/versions/0002_nutrition.py
+@@ -0,0 +1,176 @@
++"""create nutrition tables
++
++Revision ID: 0002_nutrition
++Revises: 0001_users_profiles
++Create Date: 2026-09-05
++"""
++
++from typing import Sequence, Union
++
++from alembic import op
++import sqlalchemy as sa
++
++revision: str = "0002_nutrition"
++down_revision: Union[str, Sequence[str], None] = "0001_users_profiles"
++branch_labels: Union[str, Sequence[str], None] = None
++depends_on: Union[str, Sequence[str], None] = None
++
++
++def upgrade() -> None:
++    op.create_table(
++        "nutrition_goals",
++        sa.Column("id", sa.Uuid(), nullable=False),
++        sa.Column("user_id", sa.Uuid(), nullable=False),
++        sa.Column("target_calories_kcal", sa.Numeric(8, 2), nullable=False),
++        sa.Column("target_protein_g", sa.Numeric(8, 2), nullable=False),
++        sa.Column("target_carbs_g", sa.Numeric(8, 2), nullable=False),
++        sa.Column("target_fat_g", sa.Numeric(8, 2), nullable=False),
++        sa.Column("target_fiber_g", sa.Numeric(8, 2), nullable=True),
++        sa.Column("client_updated_at", sa.DateTime(timezone=True), nullable=True),
++        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
++        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
++        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
++        sa.Column("version", sa.BigInteger(), server_default="1", nullable=False),
++        sa.CheckConstraint("target_calories_kcal > 0", name="ck_nutrition_goals_calories_positive"),
++        sa.CheckConstraint("target_protein_g >= 0", name="ck_nutrition_goals_protein_nonnegative"),
++        sa.CheckConstraint("target_carbs_g >= 0", name="ck_nutrition_goals_carbs_nonnegative"),
++        sa.CheckConstraint("target_fat_g >= 0", name="ck_nutrition_goals_fat_nonnegative"),
++        sa.CheckConstraint("target_fiber_g IS NULL OR target_fiber_g >= 0", name="ck_nutrition_goals_fiber_nonnegative"),
++        sa.ForeignKeyConstraint(["user_id"], ["pace_users.id"], ondelete="CASCADE"),
++        sa.PrimaryKeyConstraint("id"),
++    )
++    op.create_index("ix_nutrition_goals_user_id", "nutrition_goals", ["user_id"], unique=True)
++
++    op.create_table(
++        "nutrition_foods",
++        sa.Column("id", sa.Uuid(), nullable=False),
++        sa.Column("user_id", sa.Uuid(), nullable=False),
++        sa.Column("name", sa.String(160), nullable=False),
++        sa.Column("brand", sa.String(160), nullable=True),
++        sa.Column("basis_amount", sa.Numeric(10, 2), nullable=False),
++        sa.Column("basis_unit", sa.String(16), nullable=False),
++        sa.Column("calories_kcal", sa.Numeric(10, 2), nullable=False),
++        sa.Column("protein_g", sa.Numeric(10, 2), nullable=False),
++        sa.Column("carbs_g", sa.Numeric(10, 2), nullable=False),
++        sa.Column("fat_g", sa.Numeric(10, 2), nullable=False),
++        sa.Column("fiber_g", sa.Numeric(10, 2), nullable=True),
++        sa.Column("preparation_state", sa.String(16), nullable=False),
++        sa.Column("source", sa.String(16), nullable=False),
++        sa.Column("is_favorite", sa.Boolean(), server_default="false", nullable=False),
++        sa.Column("client_updated_at", sa.DateTime(timezone=True), nullable=True),
++        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
++        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
++        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
++        sa.Column("version", sa.BigInteger(), server_default="1", nullable=False),
++        sa.CheckConstraint("basis_amount > 0", name="ck_nutrition_foods_basis_positive"),
++        sa.CheckConstraint("basis_unit IN ('g', 'ml', 'piece', 'serving')", name="ck_nutrition_foods_basis_unit"),
++        sa.CheckConstraint("calories_kcal >= 0", name="ck_nutrition_foods_calories_nonnegative"),
++        sa.CheckConstraint("protein_g >= 0", name="ck_nutrition_foods_protein_nonnegative"),
++        sa.CheckConstraint("carbs_g >= 0", name="ck_nutrition_foods_carbs_nonnegative"),
++        sa.CheckConstraint("fat_g >= 0", name="ck_nutrition_foods_fat_nonnegative"),
++        sa.CheckConstraint("fiber_g IS NULL OR fiber_g >= 0", name="ck_nutrition_foods_fiber_nonnegative"),
++        sa.CheckConstraint("preparation_state IN ('unspecified', 'raw', 'cooked')", name="ck_nutrition_foods_preparation_state"),
++        sa.CheckConstraint("source IN ('starter', 'custom', 'label')", name="ck_nutrition_foods_source"),
++        sa.ForeignKeyConstraint(["user_id"], ["pace_users.id"], ondelete="CASCADE"),
++        sa.PrimaryKeyConstraint("id"),
++    )
++    op.create_index("ix_nutrition_foods_user_id", "nutrition_foods", ["user_id"], unique=False)
++    op.create_index("ix_nutrition_foods_user_name", "nutrition_foods", ["user_id", "name"], unique=False)
++
++    op.create_table(
++        "nutrition_entries",
++        sa.Column("id", sa.Uuid(), nullable=False),
++        sa.Column("user_id", sa.Uuid(), nullable=False),
++        sa.Column("logged_date", sa.Date(), nullable=False),
++        sa.Column("meal_type", sa.String(16), nullable=False),
++        sa.Column("amount", sa.Numeric(10, 2), nullable=False),
++        sa.Column("unit", sa.String(16), nullable=False),
++        sa.Column("source_food_id", sa.Uuid(), nullable=True),
++        sa.Column("food_name_snapshot", sa.String(160), nullable=False),
++        sa.Column("brand_snapshot", sa.String(160), nullable=True),
++        sa.Column("preparation_state_snapshot", sa.String(16), nullable=False),
++        sa.Column("calories_kcal_snapshot", sa.Numeric(10, 2), nullable=False),
++        sa.Column("protein_g_snapshot", sa.Numeric(10, 2), nullable=False),
++        sa.Column("carbs_g_snapshot", sa.Numeric(10, 2), nullable=False),
++        sa.Column("fat_g_snapshot", sa.Numeric(10, 2), nullable=False),
++        sa.Column("fiber_g_snapshot", sa.Numeric(10, 2), nullable=True),
++        sa.Column("client_updated_at", sa.DateTime(timezone=True), nullable=True),
++        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
++        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
++        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
++        sa.Column("version", sa.BigInteger(), server_default="1", nullable=False),
++        sa.CheckConstraint("meal_type IN ('breakfast', 'lunch', 'dinner', 'snack', 'other')", name="ck_nutrition_entries_meal_type"),
++        sa.CheckConstraint("amount > 0", name="ck_nutrition_entries_amount_positive"),
++        sa.CheckConstraint("unit IN ('g', 'ml', 'piece', 'serving')", name="ck_nutrition_entries_unit"),
++        sa.CheckConstraint("calories_kcal_snapshot >= 0", name="ck_nutrition_entries_calories_nonnegative"),
++        sa.CheckConstraint("protein_g_snapshot >= 0", name="ck_nutrition_entries_protein_nonnegative"),
++        sa.CheckConstraint("carbs_g_snapshot >= 0", name="ck_nutrition_entries_carbs_nonnegative"),
++        sa.CheckConstraint("fat_g_snapshot >= 0", name="ck_nutrition_entries_fat_nonnegative"),
++        sa.CheckConstraint("fiber_g_snapshot IS NULL OR fiber_g_snapshot >= 0", name="ck_nutrition_entries_fiber_nonnegative"),
++        sa.CheckConstraint("preparation_state_snapshot IN ('unspecified', 'raw', 'cooked')", name="ck_nutrition_entries_preparation_state"),
++        sa.ForeignKeyConstraint(["source_food_id"], ["nutrition_foods.id"], ondelete="SET NULL"),
++        sa.ForeignKeyConstraint(["user_id"], ["pace_users.id"], ondelete="CASCADE"),
++        sa.PrimaryKeyConstraint("id"),
++    )
++    op.create_index("ix_nutrition_entries_user_id", "nutrition_entries", ["user_id"], unique=False)
++    op.create_index("ix_nutrition_entries_logged_date", "nutrition_entries", ["logged_date"], unique=False)
++    op.create_index("ix_nutrition_entries_user_date", "nutrition_entries", ["user_id", "logged_date"], unique=False)
++
++    op.create_table(
++        "nutrition_saved_meals",
++        sa.Column("id", sa.Uuid(), nullable=False),
++        sa.Column("user_id", sa.Uuid(), nullable=False),
++        sa.Column("name", sa.String(160), nullable=False),
++        sa.Column("client_updated_at", sa.DateTime(timezone=True), nullable=True),
++        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
++        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
++        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
++        sa.Column("version", sa.BigInteger(), server_default="1", nullable=False),
++        sa.ForeignKeyConstraint(["user_id"], ["pace_users.id"], ondelete="CASCADE"),
++        sa.PrimaryKeyConstraint("id"),
++    )
++    op.create_index("ix_nutrition_saved_meals_user_id", "nutrition_saved_meals", ["user_id"], unique=False)
++
++    op.create_table(
++        "nutrition_saved_meal_items",
++        sa.Column("id", sa.Uuid(), nullable=False),
++        sa.Column("user_id", sa.Uuid(), nullable=False),
++        sa.Column("meal_id", sa.Uuid(), nullable=False),
++        sa.Column("food_id", sa.Uuid(), nullable=False),
++        sa.Column("amount", sa.Numeric(10, 2), nullable=False),
++        sa.Column("unit", sa.String(16), nullable=False),
++        sa.Column("position", sa.SmallInteger(), nullable=False),
++        sa.Column("client_updated_at", sa.DateTime(timezone=True), nullable=True),
++        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
++        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False),
++        sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
++        sa.Column("version", sa.BigInteger(), server_default="1", nullable=False),
++        sa.CheckConstraint("amount > 0", name="ck_nutrition_saved_meal_items_amount_positive"),
++        sa.CheckConstraint("unit IN ('g', 'ml', 'piece', 'serving')", name="ck_nutrition_saved_meal_items_unit"),
++        sa.CheckConstraint("position >= 0", name="ck_nutrition_saved_meal_items_position_nonnegative"),
++        sa.ForeignKeyConstraint(["food_id"], ["nutrition_foods.id"], ondelete="RESTRICT"),
++        sa.ForeignKeyConstraint(["meal_id"], ["nutrition_saved_meals.id"], ondelete="CASCADE"),
++        sa.ForeignKeyConstraint(["user_id"], ["pace_users.id"], ondelete="CASCADE"),
++        sa.PrimaryKeyConstraint("id"),
++    )
++    op.create_index("ix_nutrition_saved_meal_items_user_id", "nutrition_saved_meal_items", ["user_id"], unique=False)
++    op.create_index("ix_nutrition_saved_meal_items_meal_id", "nutrition_saved_meal_items", ["meal_id"], unique=False)
++    op.create_index("ix_nutrition_saved_meal_items_food_id", "nutrition_saved_meal_items", ["food_id"], unique=False)
++
++
++def downgrade() -> None:
++    op.drop_index("ix_nutrition_saved_meal_items_food_id", table_name="nutrition_saved_meal_items")
++    op.drop_index("ix_nutrition_saved_meal_items_meal_id", table_name="nutrition_saved_meal_items")
++    op.drop_index("ix_nutrition_saved_meal_items_user_id", table_name="nutrition_saved_meal_items")
++    op.drop_table("nutrition_saved_meal_items")
++    op.drop_index("ix_nutrition_saved_meals_user_id", table_name="nutrition_saved_meals")
++    op.drop_table("nutrition_saved_meals")
++    op.drop_index("ix_nutrition_entries_user_date", table_name="nutrition_entries")
++    op.drop_index("ix_nutrition_entries_logged_date", table_name="nutrition_entries")
++    op.drop_index("ix_nutrition_entries_user_id", table_name="nutrition_entries")
++    op.drop_table("nutrition_entries")
++    op.drop_index("ix_nutrition_foods_user_name", table_name="nutrition_foods")
++    op.drop_index("ix_nutrition_foods_user_id", table_name="nutrition_foods")
++    op.drop_table("nutrition_foods")
++    op.drop_index("ix_nutrition_goals_user_id", table_name="nutrition_goals")
++    op.drop_table("nutrition_goals")
+diff --git a/app/api/router.py b/app/api/router.py
+index fdc26a5..f365a69 100644
+--- a/app/api/router.py
++++ b/app/api/router.py
+@@ -2,7 +2,9 @@ from fastapi import APIRouter
+ 
+ from app.api.routes.health import router as health_router
+ from app.api.routes.profile import router as profile_router
++from app.api.routes.nutrition import router as nutrition_router
+ 
+ api_router = APIRouter()
+ api_router.include_router(health_router)
+ api_router.include_router(profile_router)
++api_router.include_router(nutrition_router)
+diff --git a/app/api/routes/nutrition.py b/app/api/routes/nutrition.py
+new file mode 100644
+index 0000000..747176d
+--- /dev/null
++++ b/app/api/routes/nutrition.py
+@@ -0,0 +1,211 @@
++from datetime import date
++from uuid import UUID
++
++from fastapi import APIRouter, Depends, Query, Response, status
++from sqlalchemy.orm import Session
++
++from app.api.deps import get_current_user
++from app.db.session import get_db
++from app.models.user import PaceUser
++from app.schemas.nutrition import (
++    NutritionDailySummary,
++    NutritionEntryCreate,
++    NutritionEntryResponse,
++    NutritionEntryUpdate,
++    NutritionFoodCreate,
++    NutritionFoodResponse,
++    NutritionFoodUpdate,
++    NutritionGoalsResponse,
++    NutritionGoalsUpsert,
++    SavedMealCreate,
++    SavedMealLogRequest,
++    SavedMealResponse,
++    SavedMealUpdate,
++)
++from app.services import nutrition_service
++
++router = APIRouter(prefix="/api/v1/nutrition", tags=["nutrition"])
++
++
++@router.get("/goals", response_model=NutritionGoalsResponse)
++def get_goals(
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    return nutrition_service.get_goals(db, user)
++
++
++@router.put("/goals", response_model=NutritionGoalsResponse)
++def upsert_goals(
++    payload: NutritionGoalsUpsert,
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    return nutrition_service.upsert_goals(db, user, payload)
++
++
++@router.post("/foods", response_model=NutritionFoodResponse, status_code=status.HTTP_201_CREATED)
++def create_food(
++    payload: NutritionFoodCreate,
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    return nutrition_service.create_food(db, user, payload)
++
++
++@router.get("/foods", response_model=list[NutritionFoodResponse])
++def list_foods(
++    favorite_only: bool = Query(default=False),
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    return nutrition_service.list_foods(db, user, favorite_only)
++
++
++@router.get("/foods/{food_id}", response_model=NutritionFoodResponse)
++def get_food(
++    food_id: UUID,
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    return nutrition_service.get_food(db, user, food_id)
++
++
++@router.patch("/foods/{food_id}", response_model=NutritionFoodResponse)
++def update_food(
++    food_id: UUID,
++    payload: NutritionFoodUpdate,
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    return nutrition_service.update_food(db, user, food_id, payload)
++
++
++@router.delete("/foods/{food_id}", status_code=status.HTTP_204_NO_CONTENT)
++def delete_food(
++    food_id: UUID,
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    nutrition_service.delete_food(db, user, food_id)
++    return Response(status_code=status.HTTP_204_NO_CONTENT)
++
++
++@router.post("/entries", response_model=NutritionEntryResponse, status_code=status.HTTP_201_CREATED)
++def create_entry(
++    payload: NutritionEntryCreate,
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    return nutrition_service.create_entry(db, user, payload)
++
++
++@router.get("/entries", response_model=list[NutritionEntryResponse])
++def list_entries(
++    logged_date: date | None = Query(default=None),
++    start_date: date | None = Query(default=None),
++    end_date: date | None = Query(default=None),
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    return nutrition_service.list_entries(
++        db,
++        user,
++        logged_date=logged_date,
++        start_date=start_date,
++        end_date=end_date,
++    )
++
++
++@router.get("/entries/{entry_id}", response_model=NutritionEntryResponse)
++def get_entry(
++    entry_id: UUID,
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    return nutrition_service.get_entry(db, user, entry_id)
++
++
++@router.patch("/entries/{entry_id}", response_model=NutritionEntryResponse)
++def update_entry(
++    entry_id: UUID,
++    payload: NutritionEntryUpdate,
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    return nutrition_service.update_entry(db, user, entry_id, payload)
++
++
++@router.delete("/entries/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
++def delete_entry(
++    entry_id: UUID,
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    nutrition_service.delete_entry(db, user, entry_id)
++    return Response(status_code=status.HTTP_204_NO_CONTENT)
++
++
++@router.get("/daily/{logged_date}", response_model=NutritionDailySummary)
++def daily_summary(
++    logged_date: date,
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    return nutrition_service.daily_summary(db, user, logged_date)
++
++
++@router.post("/saved-meals", response_model=SavedMealResponse, status_code=status.HTTP_201_CREATED)
++def create_saved_meal(
++    payload: SavedMealCreate,
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    return nutrition_service.create_saved_meal(db, user, payload)
++
++
++@router.get("/saved-meals", response_model=list[SavedMealResponse])
++def list_saved_meals(
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    return nutrition_service.list_saved_meals(db, user)
++
++
++@router.get("/saved-meals/{meal_id}", response_model=SavedMealResponse)
++def get_saved_meal(
++    meal_id: UUID,
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    return nutrition_service.get_saved_meal(db, user, meal_id)
++
++
++@router.patch("/saved-meals/{meal_id}", response_model=SavedMealResponse)
++def update_saved_meal(
++    meal_id: UUID,
++    payload: SavedMealUpdate,
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    return nutrition_service.update_saved_meal(db, user, meal_id, payload)
++
++
++@router.delete("/saved-meals/{meal_id}", status_code=status.HTTP_204_NO_CONTENT)
++def delete_saved_meal(
++    meal_id: UUID,
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    nutrition_service.delete_saved_meal(db, user, meal_id)
++    return Response(status_code=status.HTTP_204_NO_CONTENT)
++
++
++@router.post("/saved-meals/{meal_id}/log", response_model=list[NutritionEntryResponse], status_code=status.HTTP_201_CREATED)
++def log_saved_meal(
++    meal_id: UUID,
++    payload: SavedMealLogRequest,
++    db: Session = Depends(get_db),
++    user: PaceUser = Depends(get_current_user),
++):
++    return nutrition_service.log_saved_meal(db, user, meal_id, payload)
+diff --git a/app/core/config.py b/app/core/config.py
+index 6f3ac34..07c1071 100644
+--- a/app/core/config.py
++++ b/app/core/config.py
+@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
+ class Settings(BaseSettings):
+     app_name: str = "Pace API"
+     app_env: str = "local"
+-    app_version: str = "0.2.0"
++    app_version: str = "0.3.0"
+     api_v1_prefix: str = "/api/v1"
+     database_url: str = "postgresql+psycopg://pace:pace@localhost:5432/pace"
+     dev_auth_subject: str = "dev-local-user"
+diff --git a/app/models/__init__.py b/app/models/__init__.py
+index 65ce33f..999c623 100644
+--- a/app/models/__init__.py
++++ b/app/models/__init__.py
+@@ -1,4 +1,19 @@
++from app.models.nutrition import (
++    NutritionEntry,
++    NutritionFood,
++    NutritionGoal,
++    NutritionSavedMeal,
++    NutritionSavedMealItem,
++)
+ from app.models.profile import PaceProfile
+ from app.models.user import PaceUser
+ 
+-__all__ = ["PaceProfile", "PaceUser"]
++__all__ = [
++    "NutritionEntry",
++    "NutritionFood",
++    "NutritionGoal",
++    "NutritionSavedMeal",
++    "NutritionSavedMealItem",
++    "PaceProfile",
++    "PaceUser",
++]
+diff --git a/app/models/nutrition.py b/app/models/nutrition.py
+new file mode 100644
+index 0000000..1b31073
+--- /dev/null
++++ b/app/models/nutrition.py
+@@ -0,0 +1,170 @@
++import uuid
++from datetime import date, datetime
++from decimal import Decimal
++
++from sqlalchemy import (
++    Boolean,
++    CheckConstraint,
++    Date,
++    DateTime,
++    ForeignKey,
++    Index,
++    Numeric,
++    SmallInteger,
++    String,
++    Uuid,
++)
++from sqlalchemy.orm import Mapped, mapped_column
++
++from app.db.base import Base
++from app.models.mixins import TimestampMixin
++
++
++NUTRITION_UNITS = "('g', 'ml', 'piece', 'serving')"
++MEAL_TYPES = "('breakfast', 'lunch', 'dinner', 'snack', 'other')"
++PREPARATION_STATES = "('unspecified', 'raw', 'cooked')"
++FOOD_SOURCES = "('starter', 'custom', 'label')"
++
++
++class NutritionGoal(TimestampMixin, Base):
++    __tablename__ = "nutrition_goals"
++    __table_args__ = (
++        CheckConstraint("target_calories_kcal > 0", name="ck_nutrition_goals_calories_positive"),
++        CheckConstraint("target_protein_g >= 0", name="ck_nutrition_goals_protein_nonnegative"),
++        CheckConstraint("target_carbs_g >= 0", name="ck_nutrition_goals_carbs_nonnegative"),
++        CheckConstraint("target_fat_g >= 0", name="ck_nutrition_goals_fat_nonnegative"),
++        CheckConstraint(
++            "target_fiber_g IS NULL OR target_fiber_g >= 0",
++            name="ck_nutrition_goals_fiber_nonnegative",
++        ),
++    )
++
++    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
++    user_id: Mapped[uuid.UUID] = mapped_column(
++        Uuid(as_uuid=True),
++        ForeignKey("pace_users.id", ondelete="CASCADE"),
++        unique=True,
++        index=True,
++        nullable=False,
++    )
++    target_calories_kcal: Mapped[Decimal] = mapped_column(Numeric(8, 2), nullable=False)
++    target_protein_g: Mapped[Decimal] = mapped_column(Numeric(8, 2), nullable=False)
++    target_carbs_g: Mapped[Decimal] = mapped_column(Numeric(8, 2), nullable=False)
++    target_fat_g: Mapped[Decimal] = mapped_column(Numeric(8, 2), nullable=False)
++    target_fiber_g: Mapped[Decimal | None] = mapped_column(Numeric(8, 2), nullable=True)
++    client_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
++
++
++class NutritionFood(TimestampMixin, Base):
++    __tablename__ = "nutrition_foods"
++    __table_args__ = (
++        CheckConstraint("basis_amount > 0", name="ck_nutrition_foods_basis_positive"),
++        CheckConstraint(f"basis_unit IN {NUTRITION_UNITS}", name="ck_nutrition_foods_basis_unit"),
++        CheckConstraint("calories_kcal >= 0", name="ck_nutrition_foods_calories_nonnegative"),
++        CheckConstraint("protein_g >= 0", name="ck_nutrition_foods_protein_nonnegative"),
++        CheckConstraint("carbs_g >= 0", name="ck_nutrition_foods_carbs_nonnegative"),
++        CheckConstraint("fat_g >= 0", name="ck_nutrition_foods_fat_nonnegative"),
++        CheckConstraint("fiber_g IS NULL OR fiber_g >= 0", name="ck_nutrition_foods_fiber_nonnegative"),
++        CheckConstraint(
++            f"preparation_state IN {PREPARATION_STATES}",
++            name="ck_nutrition_foods_preparation_state",
++        ),
++        CheckConstraint(f"source IN {FOOD_SOURCES}", name="ck_nutrition_foods_source"),
++        Index("ix_nutrition_foods_user_name", "user_id", "name"),
++    )
++
++    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
++    user_id: Mapped[uuid.UUID] = mapped_column(
++        Uuid(as_uuid=True), ForeignKey("pace_users.id", ondelete="CASCADE"), index=True, nullable=False
++    )
++    name: Mapped[str] = mapped_column(String(160), nullable=False)
++    brand: Mapped[str | None] = mapped_column(String(160), nullable=True)
++    basis_amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
++    basis_unit: Mapped[str] = mapped_column(String(16), nullable=False)
++    calories_kcal: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
++    protein_g: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
++    carbs_g: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
++    fat_g: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
++    fiber_g: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
++    preparation_state: Mapped[str] = mapped_column(String(16), default="unspecified", nullable=False)
++    source: Mapped[str] = mapped_column(String(16), default="custom", nullable=False)
++    is_favorite: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
++    client_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
++
++
++class NutritionEntry(TimestampMixin, Base):
++    __tablename__ = "nutrition_entries"
++    __table_args__ = (
++        CheckConstraint(f"meal_type IN {MEAL_TYPES}", name="ck_nutrition_entries_meal_type"),
++        CheckConstraint("amount > 0", name="ck_nutrition_entries_amount_positive"),
++        CheckConstraint(f"unit IN {NUTRITION_UNITS}", name="ck_nutrition_entries_unit"),
++        CheckConstraint("calories_kcal_snapshot >= 0", name="ck_nutrition_entries_calories_nonnegative"),
++        CheckConstraint("protein_g_snapshot >= 0", name="ck_nutrition_entries_protein_nonnegative"),
++        CheckConstraint("carbs_g_snapshot >= 0", name="ck_nutrition_entries_carbs_nonnegative"),
++        CheckConstraint("fat_g_snapshot >= 0", name="ck_nutrition_entries_fat_nonnegative"),
++        CheckConstraint(
++            "fiber_g_snapshot IS NULL OR fiber_g_snapshot >= 0",
++            name="ck_nutrition_entries_fiber_nonnegative",
++        ),
++        CheckConstraint(
++            f"preparation_state_snapshot IN {PREPARATION_STATES}",
++            name="ck_nutrition_entries_preparation_state",
++        ),
++        Index("ix_nutrition_entries_user_date", "user_id", "logged_date"),
++    )
++
++    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
++    user_id: Mapped[uuid.UUID] = mapped_column(
++        Uuid(as_uuid=True), ForeignKey("pace_users.id", ondelete="CASCADE"), index=True, nullable=False
++    )
++    logged_date: Mapped[date] = mapped_column(Date, index=True, nullable=False)
++    meal_type: Mapped[str] = mapped_column(String(16), nullable=False)
++    amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
++    unit: Mapped[str] = mapped_column(String(16), nullable=False)
++    source_food_id: Mapped[uuid.UUID | None] = mapped_column(
++        Uuid(as_uuid=True), ForeignKey("nutrition_foods.id", ondelete="SET NULL"), nullable=True
++    )
++    food_name_snapshot: Mapped[str] = mapped_column(String(160), nullable=False)
++    brand_snapshot: Mapped[str | None] = mapped_column(String(160), nullable=True)
++    preparation_state_snapshot: Mapped[str] = mapped_column(String(16), nullable=False)
++    calories_kcal_snapshot: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
++    protein_g_snapshot: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
++    carbs_g_snapshot: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
++    fat_g_snapshot: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
++    fiber_g_snapshot: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
++    client_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
++
++
++class NutritionSavedMeal(TimestampMixin, Base):
++    __tablename__ = "nutrition_saved_meals"
++
++    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
++    user_id: Mapped[uuid.UUID] = mapped_column(
++        Uuid(as_uuid=True), ForeignKey("pace_users.id", ondelete="CASCADE"), index=True, nullable=False
++    )
++    name: Mapped[str] = mapped_column(String(160), nullable=False)
++    client_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
++
++
++class NutritionSavedMealItem(TimestampMixin, Base):
++    __tablename__ = "nutrition_saved_meal_items"
++    __table_args__ = (
++        CheckConstraint("amount > 0", name="ck_nutrition_saved_meal_items_amount_positive"),
++        CheckConstraint(f"unit IN {NUTRITION_UNITS}", name="ck_nutrition_saved_meal_items_unit"),
++        CheckConstraint("position >= 0", name="ck_nutrition_saved_meal_items_position_nonnegative"),
++    )
++
++    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
++    user_id: Mapped[uuid.UUID] = mapped_column(
++        Uuid(as_uuid=True), ForeignKey("pace_users.id", ondelete="CASCADE"), index=True, nullable=False
++    )
++    meal_id: Mapped[uuid.UUID] = mapped_column(
++        Uuid(as_uuid=True), ForeignKey("nutrition_saved_meals.id", ondelete="CASCADE"), index=True, nullable=False
++    )
++    food_id: Mapped[uuid.UUID] = mapped_column(
++        Uuid(as_uuid=True), ForeignKey("nutrition_foods.id", ondelete="RESTRICT"), index=True, nullable=False
++    )
++    amount: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
++    unit: Mapped[str] = mapped_column(String(16), nullable=False)
++    position: Mapped[int] = mapped_column(SmallInteger, nullable=False)
++    client_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+diff --git a/app/repositories/nutrition_repository.py b/app/repositories/nutrition_repository.py
+new file mode 100644
+index 0000000..ee1dc47
+--- /dev/null
++++ b/app/repositories/nutrition_repository.py
+@@ -0,0 +1,249 @@
++from datetime import date, datetime, timezone
++from uuid import UUID
++
++from sqlalchemy import select
++from sqlalchemy.orm import Session
++
++from app.models.nutrition import (
++    NutritionEntry,
++    NutritionFood,
++    NutritionGoal,
++    NutritionSavedMeal,
++    NutritionSavedMealItem,
++)
++
++
++def get_goals(db: Session, user_id: UUID, *, include_deleted: bool = False) -> NutritionGoal | None:
++    stmt = select(NutritionGoal).where(NutritionGoal.user_id == user_id)
++    if not include_deleted:
++        stmt = stmt.where(NutritionGoal.deleted_at.is_(None))
++    return db.scalar(stmt)
++
++
++def save_goals(db: Session, user_id: UUID, values: dict) -> NutritionGoal:
++    goals = get_goals(db, user_id, include_deleted=True)
++    if goals is None:
++        goals = NutritionGoal(user_id=user_id, **values)
++        db.add(goals)
++    else:
++        for field, value in values.items():
++            setattr(goals, field, value)
++        goals.deleted_at = None
++        goals.version += 1
++    db.commit()
++    db.refresh(goals)
++    return goals
++
++
++def create_food(db: Session, user_id: UUID, values: dict) -> NutritionFood:
++    food = NutritionFood(user_id=user_id, **values)
++    db.add(food)
++    db.commit()
++    db.refresh(food)
++    return food
++
++
++def list_foods(db: Session, user_id: UUID, *, favorite_only: bool = False) -> list[NutritionFood]:
++    stmt = (
++        select(NutritionFood)
++        .where(NutritionFood.user_id == user_id, NutritionFood.deleted_at.is_(None))
++        .order_by(NutritionFood.name.asc(), NutritionFood.created_at.asc())
++    )
++    if favorite_only:
++        stmt = stmt.where(NutritionFood.is_favorite.is_(True))
++    return list(db.scalars(stmt).all())
++
++
++def get_food(
++    db: Session, user_id: UUID, food_id: UUID, *, include_deleted: bool = False
++) -> NutritionFood | None:
++    stmt = select(NutritionFood).where(
++        NutritionFood.id == food_id,
++        NutritionFood.user_id == user_id,
++    )
++    if not include_deleted:
++        stmt = stmt.where(NutritionFood.deleted_at.is_(None))
++    return db.scalar(stmt)
++
++
++def update_food(db: Session, food: NutritionFood, values: dict) -> NutritionFood:
++    for field, value in values.items():
++        setattr(food, field, value)
++    food.version += 1
++    db.commit()
++    db.refresh(food)
++    return food
++
++
++def soft_delete_food(db: Session, food: NutritionFood) -> None:
++    food.deleted_at = datetime.now(timezone.utc)
++    food.version += 1
++    db.commit()
++
++
++def create_entry(db: Session, entry: NutritionEntry, *, commit: bool = True) -> NutritionEntry:
++    db.add(entry)
++    if commit:
++        db.commit()
++        db.refresh(entry)
++    else:
++        db.flush()
++    return entry
++
++
++def get_entry(db: Session, user_id: UUID, entry_id: UUID) -> NutritionEntry | None:
++    return db.scalar(
++        select(NutritionEntry).where(
++            NutritionEntry.id == entry_id,
++            NutritionEntry.user_id == user_id,
++            NutritionEntry.deleted_at.is_(None),
++        )
++    )
++
++
++def list_entries(
++    db: Session,
++    user_id: UUID,
++    *,
++    logged_date: date | None = None,
++    start_date: date | None = None,
++    end_date: date | None = None,
++) -> list[NutritionEntry]:
++    stmt = select(NutritionEntry).where(
++        NutritionEntry.user_id == user_id,
++        NutritionEntry.deleted_at.is_(None),
++    )
++    if logged_date is not None:
++        stmt = stmt.where(NutritionEntry.logged_date == logged_date)
++    else:
++        if start_date is not None:
++            stmt = stmt.where(NutritionEntry.logged_date >= start_date)
++        if end_date is not None:
++            stmt = stmt.where(NutritionEntry.logged_date <= end_date)
++    stmt = stmt.order_by(NutritionEntry.logged_date.desc(), NutritionEntry.created_at.desc())
++    return list(db.scalars(stmt).all())
++
++
++def update_entry(db: Session, entry: NutritionEntry, values: dict) -> NutritionEntry:
++    for field, value in values.items():
++        setattr(entry, field, value)
++    entry.version += 1
++    db.commit()
++    db.refresh(entry)
++    return entry
++
++
++def soft_delete_entry(db: Session, entry: NutritionEntry) -> None:
++    entry.deleted_at = datetime.now(timezone.utc)
++    entry.version += 1
++    db.commit()
++
++
++def create_saved_meal(
++    db: Session,
++    user_id: UUID,
++    *,
++    name: str,
++    client_updated_at,
++    items: list[dict],
++) -> NutritionSavedMeal:
++    meal = NutritionSavedMeal(
++        user_id=user_id,
++        name=name,
++        client_updated_at=client_updated_at,
++    )
++    db.add(meal)
++    db.flush()
++
++    for position, values in enumerate(items):
++        db.add(
++            NutritionSavedMealItem(
++                user_id=user_id,
++                meal_id=meal.id,
++                position=position,
++                **values,
++            )
++        )
++    db.commit()
++    db.refresh(meal)
++    return meal
++
++
++def list_saved_meals(db: Session, user_id: UUID) -> list[NutritionSavedMeal]:
++    return list(
++        db.scalars(
++            select(NutritionSavedMeal)
++            .where(
++                NutritionSavedMeal.user_id == user_id,
++                NutritionSavedMeal.deleted_at.is_(None),
++            )
++            .order_by(NutritionSavedMeal.name.asc(), NutritionSavedMeal.created_at.asc())
++        ).all()
++    )
++
++
++def get_saved_meal(db: Session, user_id: UUID, meal_id: UUID) -> NutritionSavedMeal | None:
++    return db.scalar(
++        select(NutritionSavedMeal).where(
++            NutritionSavedMeal.id == meal_id,
++            NutritionSavedMeal.user_id == user_id,
++            NutritionSavedMeal.deleted_at.is_(None),
++        )
++    )
++
++
++def list_saved_meal_items(
++    db: Session, user_id: UUID, meal_id: UUID, *, include_deleted: bool = False
++) -> list[NutritionSavedMealItem]:
++    stmt = select(NutritionSavedMealItem).where(
++        NutritionSavedMealItem.user_id == user_id,
++        NutritionSavedMealItem.meal_id == meal_id,
++    )
++    if not include_deleted:
++        stmt = stmt.where(NutritionSavedMealItem.deleted_at.is_(None))
++    stmt = stmt.order_by(NutritionSavedMealItem.position.asc())
++    return list(db.scalars(stmt).all())
++
++
++def update_saved_meal(
++    db: Session,
++    meal: NutritionSavedMeal,
++    *,
++    name: str | None,
++    replace_items: list[dict] | None,
++    client_updated_at,
++) -> NutritionSavedMeal:
++    if name is not None:
++        meal.name = name
++    if client_updated_at is not None:
++        meal.client_updated_at = client_updated_at
++
++    if replace_items is not None:
++        now = datetime.now(timezone.utc)
++        for item in list_saved_meal_items(db, meal.user_id, meal.id):
++            item.deleted_at = now
++            item.version += 1
++        for position, values in enumerate(replace_items):
++            db.add(
++                NutritionSavedMealItem(
++                    user_id=meal.user_id,
++                    meal_id=meal.id,
++                    position=position,
++                    **values,
++                )
++            )
++
++    meal.version += 1
++    db.commit()
++    db.refresh(meal)
++    return meal
++
++
++def soft_delete_saved_meal(db: Session, meal: NutritionSavedMeal) -> None:
++    now = datetime.now(timezone.utc)
++    meal.deleted_at = now
++    meal.version += 1
++    for item in list_saved_meal_items(db, meal.user_id, meal.id):
++        item.deleted_at = now
++        item.version += 1
++    db.commit()
+diff --git a/app/schemas/nutrition.py b/app/schemas/nutrition.py
+new file mode 100644
+index 0000000..6a3b9a2
+--- /dev/null
++++ b/app/schemas/nutrition.py
+@@ -0,0 +1,225 @@
++from datetime import date, datetime
++from typing import Literal
++from uuid import UUID
++
++from pydantic import BaseModel, ConfigDict, Field, model_validator
++
++NutritionUnit = Literal["g", "ml", "piece", "serving"]
++MealType = Literal["breakfast", "lunch", "dinner", "snack", "other"]
++PreparationState = Literal["unspecified", "raw", "cooked"]
++FoodSource = Literal["starter", "custom", "label"]
++
++
++class SyncResponseFields(BaseModel):
++    model_config = ConfigDict(from_attributes=True)
++
++    id: UUID
++    user_id: UUID
++    created_at: datetime
++    updated_at: datetime
++    deleted_at: datetime | None
++    client_updated_at: datetime | None
++    version: int
++
++
++class NutritionGoalsUpsert(BaseModel):
++    target_calories_kcal: float = Field(gt=0, le=20000)
++    target_protein_g: float = Field(ge=0, le=2000)
++    target_carbs_g: float = Field(ge=0, le=3000)
++    target_fat_g: float = Field(ge=0, le=1000)
++    target_fiber_g: float | None = Field(default=None, ge=0, le=500)
++    client_updated_at: datetime | None = None
++
++
++class NutritionGoalsResponse(NutritionGoalsUpsert, SyncResponseFields):
++    pass
++
++
++class NutritionFoodCreate(BaseModel):
++    name: str = Field(min_length=1, max_length=160)
++    brand: str | None = Field(default=None, max_length=160)
++    basis_amount: float = Field(gt=0, le=100000)
++    basis_unit: NutritionUnit
++    calories_kcal: float = Field(ge=0, le=100000)
++    protein_g: float = Field(ge=0, le=10000)
++    carbs_g: float = Field(ge=0, le=10000)
++    fat_g: float = Field(ge=0, le=10000)
++    fiber_g: float | None = Field(default=None, ge=0, le=10000)
++    preparation_state: PreparationState = "unspecified"
++    source: FoodSource = "custom"
++    is_favorite: bool = False
++    client_updated_at: datetime | None = None
++
++
++class NutritionFoodUpdate(BaseModel):
++    name: str | None = Field(default=None, min_length=1, max_length=160)
++    brand: str | None = Field(default=None, max_length=160)
++    basis_amount: float | None = Field(default=None, gt=0, le=100000)
++    basis_unit: NutritionUnit | None = None
++    calories_kcal: float | None = Field(default=None, ge=0, le=100000)
++    protein_g: float | None = Field(default=None, ge=0, le=10000)
++    carbs_g: float | None = Field(default=None, ge=0, le=10000)
++    fat_g: float | None = Field(default=None, ge=0, le=10000)
++    fiber_g: float | None = Field(default=None, ge=0, le=10000)
++    preparation_state: PreparationState | None = None
++    source: FoodSource | None = None
++    is_favorite: bool | None = None
++    client_updated_at: datetime | None = None
++
++    @model_validator(mode="after")
++    def reject_null_required_fields(self):
++        required = {
++            "name",
++            "basis_amount",
++            "basis_unit",
++            "calories_kcal",
++            "protein_g",
++            "carbs_g",
++            "fat_g",
++            "preparation_state",
++            "source",
++            "is_favorite",
++        }
++        for field_name in self.model_fields_set & required:
++            if getattr(self, field_name) is None:
++                raise ValueError(f"{field_name} cannot be null")
++        return self
++
++
++class NutritionFoodResponse(NutritionFoodCreate, SyncResponseFields):
++    pass
++
++
++class ManualNutritionEntry(BaseModel):
++    name: str = Field(min_length=1, max_length=160)
++    brand: str | None = Field(default=None, max_length=160)
++    amount: float = Field(gt=0, le=100000)
++    unit: NutritionUnit
++    calories_kcal: float = Field(ge=0, le=100000)
++    protein_g: float = Field(ge=0, le=10000)
++    carbs_g: float = Field(ge=0, le=10000)
++    fat_g: float = Field(ge=0, le=10000)
++    fiber_g: float | None = Field(default=None, ge=0, le=10000)
++    preparation_state: PreparationState = "unspecified"
++
++
++class NutritionEntryCreate(BaseModel):
++    logged_date: date
++    meal_type: MealType
++    food_id: UUID | None = None
++    amount: float | None = Field(default=None, gt=0, le=100000)
++    unit: NutritionUnit | None = None
++    manual: ManualNutritionEntry | None = None
++    client_updated_at: datetime | None = None
++
++    @model_validator(mode="after")
++    def validate_source(self):
++        using_food = self.food_id is not None
++        using_manual = self.manual is not None
++        if using_food == using_manual:
++            raise ValueError("provide exactly one of food_id or manual")
++        if using_food and (self.amount is None or self.unit is None):
++            raise ValueError("amount and unit are required when food_id is provided")
++        if using_manual and (self.amount is not None or self.unit is not None):
++            raise ValueError("amount and unit belong inside manual when logging a manual food")
++        return self
++
++
++class NutritionEntryUpdate(BaseModel):
++    logged_date: date | None = None
++    meal_type: MealType | None = None
++    amount: float | None = Field(default=None, gt=0, le=100000)
++    client_updated_at: datetime | None = None
++
++    @model_validator(mode="after")
++    def reject_null_fields(self):
++        required = {"logged_date", "meal_type", "amount"}
++        for field_name in self.model_fields_set & required:
++            if getattr(self, field_name) is None:
++                raise ValueError(f"{field_name} cannot be null")
++        return self
++
++
++class NutritionEntryResponse(SyncResponseFields):
++    logged_date: date
++    meal_type: MealType
++    amount: float
++    unit: NutritionUnit
++    source_food_id: UUID | None
++    food_name: str
++    brand: str | None
++    preparation_state: PreparationState
++    calories_kcal: float
++    protein_g: float
++    carbs_g: float
++    fat_g: float
++    fiber_g: float | None
++
++
++class NutritionTotals(BaseModel):
++    calories_kcal: float
++    protein_g: float
++    carbs_g: float
++    fat_g: float
++    fiber_g: float | None
++
++
++class NutritionDailySummary(BaseModel):
++    logged_date: date
++    totals: NutritionTotals
++    goals: NutritionGoalsResponse | None
++    entries: list[NutritionEntryResponse]
++
++
++class SavedMealItemWrite(BaseModel):
++    food_id: UUID
++    amount: float = Field(gt=0, le=100000)
++    unit: NutritionUnit
++
++
++class SavedMealCreate(BaseModel):
++    name: str = Field(min_length=1, max_length=160)
++    items: list[SavedMealItemWrite] = Field(min_length=1, max_length=100)
++    client_updated_at: datetime | None = None
++
++
++class SavedMealUpdate(BaseModel):
++    name: str | None = Field(default=None, min_length=1, max_length=160)
++    items: list[SavedMealItemWrite] | None = Field(default=None, min_length=1, max_length=100)
++    client_updated_at: datetime | None = None
++
++    @model_validator(mode="after")
++    def reject_null_fields(self):
++        if "name" in self.model_fields_set and self.name is None:
++            raise ValueError("name cannot be null")
++        if "items" in self.model_fields_set and self.items is None:
++            raise ValueError("items cannot be null")
++        return self
++
++
++class SavedMealItemResponse(SyncResponseFields):
++    meal_id: UUID
++    food_id: UUID
++    amount: float
++    unit: NutritionUnit
++    position: int
++    food_name: str
++    brand: str | None
++    food_deleted: bool
++    calories_kcal: float
++    protein_g: float
++    carbs_g: float
++    fat_g: float
++    fiber_g: float | None
++
++
++class SavedMealResponse(SyncResponseFields):
++    name: str
++    items: list[SavedMealItemResponse]
++    totals: NutritionTotals
++
++
++class SavedMealLogRequest(BaseModel):
++    logged_date: date
++    meal_type: MealType
++    client_updated_at: datetime | None = None
+diff --git a/app/services/nutrition_service.py b/app/services/nutrition_service.py
+new file mode 100644
+index 0000000..de758bd
+--- /dev/null
++++ b/app/services/nutrition_service.py
+@@ -0,0 +1,458 @@
++from decimal import Decimal, ROUND_HALF_UP
++from uuid import UUID
++
++from fastapi import HTTPException, status
++from sqlalchemy.orm import Session
++
++from app.models.nutrition import NutritionEntry, NutritionFood, NutritionGoal, NutritionSavedMeal
++from app.models.user import PaceUser
++from app.repositories import nutrition_repository as repo
++from app.schemas.nutrition import (
++    NutritionDailySummary,
++    NutritionEntryCreate,
++    NutritionEntryResponse,
++    NutritionEntryUpdate,
++    NutritionFoodCreate,
++    NutritionFoodResponse,
++    NutritionFoodUpdate,
++    NutritionGoalsResponse,
++    NutritionGoalsUpsert,
++    NutritionTotals,
++    SavedMealCreate,
++    SavedMealLogRequest,
++    SavedMealResponse,
++    SavedMealItemResponse,
++    SavedMealUpdate,
++)
++
++TWO_DP = Decimal("0.01")
++
++
++def D(value) -> Decimal:
++    return Decimal(str(value))
++
++
++def q(value: Decimal) -> Decimal:
++    return value.quantize(TWO_DP, rounding=ROUND_HALF_UP)
++
++
++def scaled_nutrition(food: NutritionFood, amount) -> dict[str, Decimal | None]:
++    multiplier = D(amount) / food.basis_amount
++    return {
++        "calories_kcal": q(food.calories_kcal * multiplier),
++        "protein_g": q(food.protein_g * multiplier),
++        "carbs_g": q(food.carbs_g * multiplier),
++        "fat_g": q(food.fat_g * multiplier),
++        "fiber_g": q(food.fiber_g * multiplier) if food.fiber_g is not None else None,
++    }
++
++
++def goals_to_response(goals: NutritionGoal) -> NutritionGoalsResponse:
++    return NutritionGoalsResponse.model_validate(goals)
++
++
++def get_goals(db: Session, user: PaceUser) -> NutritionGoalsResponse:
++    goals = repo.get_goals(db, user.id)
++    if goals is None:
++        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nutrition goals not found")
++    return goals_to_response(goals)
++
++
++def upsert_goals(db: Session, user: PaceUser, payload: NutritionGoalsUpsert) -> NutritionGoalsResponse:
++    goals = repo.save_goals(db, user.id, payload.model_dump())
++    return goals_to_response(goals)
++
++
++def food_to_response(food: NutritionFood) -> NutritionFoodResponse:
++    return NutritionFoodResponse.model_validate(food)
++
++
++def create_food(db: Session, user: PaceUser, payload: NutritionFoodCreate) -> NutritionFoodResponse:
++    return food_to_response(repo.create_food(db, user.id, payload.model_dump()))
++
++
++def list_foods(db: Session, user: PaceUser, favorite_only: bool) -> list[NutritionFoodResponse]:
++    return [food_to_response(food) for food in repo.list_foods(db, user.id, favorite_only=favorite_only)]
++
++
++def require_food(db: Session, user: PaceUser, food_id: UUID, *, include_deleted: bool = False) -> NutritionFood:
++    food = repo.get_food(db, user.id, food_id, include_deleted=include_deleted)
++    if food is None:
++        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Food not found")
++    return food
++
++
++def get_food(db: Session, user: PaceUser, food_id: UUID) -> NutritionFoodResponse:
++    return food_to_response(require_food(db, user, food_id))
++
++
++def update_food(
++    db: Session, user: PaceUser, food_id: UUID, payload: NutritionFoodUpdate
++) -> NutritionFoodResponse:
++    food = require_food(db, user, food_id)
++    changes = payload.model_dump(exclude_unset=True)
++    if not changes:
++        return food_to_response(food)
++    return food_to_response(repo.update_food(db, food, changes))
++
++
++def delete_food(db: Session, user: PaceUser, food_id: UUID) -> None:
++    food = require_food(db, user, food_id)
++    repo.soft_delete_food(db, food)
++
++
++def entry_to_response(entry: NutritionEntry) -> NutritionEntryResponse:
++    return NutritionEntryResponse(
++        id=entry.id,
++        user_id=entry.user_id,
++        logged_date=entry.logged_date,
++        meal_type=entry.meal_type,
++        amount=entry.amount,
++        unit=entry.unit,
++        source_food_id=entry.source_food_id,
++        food_name=entry.food_name_snapshot,
++        brand=entry.brand_snapshot,
++        preparation_state=entry.preparation_state_snapshot,
++        calories_kcal=entry.calories_kcal_snapshot,
++        protein_g=entry.protein_g_snapshot,
++        carbs_g=entry.carbs_g_snapshot,
++        fat_g=entry.fat_g_snapshot,
++        fiber_g=entry.fiber_g_snapshot,
++        created_at=entry.created_at,
++        updated_at=entry.updated_at,
++        deleted_at=entry.deleted_at,
++        client_updated_at=entry.client_updated_at,
++        version=entry.version,
++    )
++
++
++def build_entry_from_food(
++    *,
++    user_id,
++    food: NutritionFood,
++    logged_date,
++    meal_type,
++    amount,
++    unit,
++    client_updated_at=None,
++) -> NutritionEntry:
++    if unit != food.basis_unit:
++        raise HTTPException(
++            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
++            detail=f"Unit must match the food basis unit '{food.basis_unit}'",
++        )
++    nutrition = scaled_nutrition(food, amount)
++    return NutritionEntry(
++        user_id=user_id,
++        logged_date=logged_date,
++        meal_type=meal_type,
++        amount=D(amount),
++        unit=unit,
++        source_food_id=food.id,
++        food_name_snapshot=food.name,
++        brand_snapshot=food.brand,
++        preparation_state_snapshot=food.preparation_state,
++        calories_kcal_snapshot=nutrition["calories_kcal"],
++        protein_g_snapshot=nutrition["protein_g"],
++        carbs_g_snapshot=nutrition["carbs_g"],
++        fat_g_snapshot=nutrition["fat_g"],
++        fiber_g_snapshot=nutrition["fiber_g"],
++        client_updated_at=client_updated_at,
++    )
++
++
++def create_entry(db: Session, user: PaceUser, payload: NutritionEntryCreate) -> NutritionEntryResponse:
++    if payload.food_id is not None:
++        food = require_food(db, user, payload.food_id)
++        entry = build_entry_from_food(
++            user_id=user.id,
++            food=food,
++            logged_date=payload.logged_date,
++            meal_type=payload.meal_type,
++            amount=payload.amount,
++            unit=payload.unit,
++            client_updated_at=payload.client_updated_at,
++        )
++    else:
++        manual = payload.manual
++        assert manual is not None
++        entry = NutritionEntry(
++            user_id=user.id,
++            logged_date=payload.logged_date,
++            meal_type=payload.meal_type,
++            amount=D(manual.amount),
++            unit=manual.unit,
++            source_food_id=None,
++            food_name_snapshot=manual.name,
++            brand_snapshot=manual.brand,
++            preparation_state_snapshot=manual.preparation_state,
++            calories_kcal_snapshot=D(manual.calories_kcal),
++            protein_g_snapshot=D(manual.protein_g),
++            carbs_g_snapshot=D(manual.carbs_g),
++            fat_g_snapshot=D(manual.fat_g),
++            fiber_g_snapshot=D(manual.fiber_g) if manual.fiber_g is not None else None,
++            client_updated_at=payload.client_updated_at,
++        )
++    return entry_to_response(repo.create_entry(db, entry))
++
++
++def list_entries(
++    db: Session,
++    user: PaceUser,
++    *,
++    logged_date=None,
++    start_date=None,
++    end_date=None,
++) -> list[NutritionEntryResponse]:
++    if logged_date is not None and (start_date is not None or end_date is not None):
++        raise HTTPException(
++            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
++            detail="Use logged_date or a date range, not both",
++        )
++    if start_date is not None and end_date is not None and start_date > end_date:
++        raise HTTPException(
++            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
++            detail="start_date cannot be after end_date",
++        )
++    return [
++        entry_to_response(entry)
++        for entry in repo.list_entries(
++            db,
++            user.id,
++            logged_date=logged_date,
++            start_date=start_date,
++            end_date=end_date,
++        )
++    ]
++
++
++def require_entry(db: Session, user: PaceUser, entry_id: UUID) -> NutritionEntry:
++    entry = repo.get_entry(db, user.id, entry_id)
++    if entry is None:
++        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nutrition entry not found")
++    return entry
++
++
++def get_entry(db: Session, user: PaceUser, entry_id: UUID) -> NutritionEntryResponse:
++    return entry_to_response(require_entry(db, user, entry_id))
++
++
++def update_entry(
++    db: Session, user: PaceUser, entry_id: UUID, payload: NutritionEntryUpdate
++) -> NutritionEntryResponse:
++    entry = require_entry(db, user, entry_id)
++    changes = payload.model_dump(exclude_unset=True)
++    if not changes:
++        return entry_to_response(entry)
++
++    if "amount" in changes:
++        old_amount = entry.amount
++        new_amount = D(changes["amount"])
++        multiplier = new_amount / old_amount
++        for field in (
++            "calories_kcal_snapshot",
++            "protein_g_snapshot",
++            "carbs_g_snapshot",
++            "fat_g_snapshot",
++        ):
++            setattr(entry, field, q(getattr(entry, field) * multiplier))
++        if entry.fiber_g_snapshot is not None:
++            entry.fiber_g_snapshot = q(entry.fiber_g_snapshot * multiplier)
++        changes["amount"] = new_amount
++
++    return entry_to_response(repo.update_entry(db, entry, changes))
++
++
++def delete_entry(db: Session, user: PaceUser, entry_id: UUID) -> None:
++    repo.soft_delete_entry(db, require_entry(db, user, entry_id))
++
++
++def totals_for_entries(entries: list[NutritionEntryResponse]) -> NutritionTotals:
++    fiber_values = [D(entry.fiber_g) for entry in entries if entry.fiber_g is not None]
++    return NutritionTotals(
++        calories_kcal=float(sum((D(entry.calories_kcal) for entry in entries), Decimal("0"))),
++        protein_g=float(sum((D(entry.protein_g) for entry in entries), Decimal("0"))),
++        carbs_g=float(sum((D(entry.carbs_g) for entry in entries), Decimal("0"))),
++        fat_g=float(sum((D(entry.fat_g) for entry in entries), Decimal("0"))),
++        fiber_g=float(sum(fiber_values, Decimal("0"))) if fiber_values else None,
++    )
++
++
++def daily_summary(db: Session, user: PaceUser, logged_date) -> NutritionDailySummary:
++    entries = list_entries(db, user, logged_date=logged_date)
++    goals = repo.get_goals(db, user.id)
++    return NutritionDailySummary(
++        logged_date=logged_date,
++        totals=totals_for_entries(entries),
++        goals=goals_to_response(goals) if goals is not None else None,
++        entries=entries,
++    )
++
++
++def validate_saved_meal_items(db: Session, user: PaceUser, items) -> list[dict]:
++    validated: list[dict] = []
++    for item in items:
++        food = require_food(db, user, item.food_id)
++        if item.unit != food.basis_unit:
++            raise HTTPException(
++                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
++                detail=f"Unit for '{food.name}' must match '{food.basis_unit}'",
++            )
++        validated.append({"food_id": food.id, "amount": D(item.amount), "unit": item.unit})
++    return validated
++
++
++def saved_meal_to_response(db: Session, user: PaceUser, meal: NutritionSavedMeal) -> SavedMealResponse:
++    items_response: list[SavedMealItemResponse] = []
++    item_totals: list[NutritionTotals] = []
++    for item in repo.list_saved_meal_items(db, user.id, meal.id):
++        food = require_food(db, user, item.food_id, include_deleted=True)
++        nutrition = scaled_nutrition(food, item.amount)
++        item_totals.append(
++            NutritionTotals(
++                calories_kcal=nutrition["calories_kcal"],
++                protein_g=nutrition["protein_g"],
++                carbs_g=nutrition["carbs_g"],
++                fat_g=nutrition["fat_g"],
++                fiber_g=nutrition["fiber_g"],
++            )
++        )
++        items_response.append(
++            SavedMealItemResponse(
++                id=item.id,
++                user_id=item.user_id,
++                meal_id=item.meal_id,
++                food_id=item.food_id,
++                amount=item.amount,
++                unit=item.unit,
++                position=item.position,
++                food_name=food.name,
++                brand=food.brand,
++                food_deleted=food.deleted_at is not None,
++                calories_kcal=nutrition["calories_kcal"],
++                protein_g=nutrition["protein_g"],
++                carbs_g=nutrition["carbs_g"],
++                fat_g=nutrition["fat_g"],
++                fiber_g=nutrition["fiber_g"],
++                created_at=item.created_at,
++                updated_at=item.updated_at,
++                deleted_at=item.deleted_at,
++                client_updated_at=item.client_updated_at,
++                version=item.version,
++            )
++        )
++
++    totals = NutritionTotals(
++        calories_kcal=sum((D(t.calories_kcal) for t in item_totals), Decimal("0")),
++        protein_g=sum((D(t.protein_g) for t in item_totals), Decimal("0")),
++        carbs_g=sum((D(t.carbs_g) for t in item_totals), Decimal("0")),
++        fat_g=sum((D(t.fat_g) for t in item_totals), Decimal("0")),
++        fiber_g=(
++            sum((D(t.fiber_g) for t in item_totals if t.fiber_g is not None), Decimal("0"))
++            if any(t.fiber_g is not None for t in item_totals)
++            else None
++        ),
++    )
++    return SavedMealResponse(
++        id=meal.id,
++        user_id=meal.user_id,
++        name=meal.name,
++        items=items_response,
++        totals=totals,
++        created_at=meal.created_at,
++        updated_at=meal.updated_at,
++        deleted_at=meal.deleted_at,
++        client_updated_at=meal.client_updated_at,
++        version=meal.version,
++    )
++
++
++def create_saved_meal(
++    db: Session, user: PaceUser, payload: SavedMealCreate
++) -> SavedMealResponse:
++    items = validate_saved_meal_items(db, user, payload.items)
++    meal = repo.create_saved_meal(
++        db,
++        user.id,
++        name=payload.name,
++        client_updated_at=payload.client_updated_at,
++        items=items,
++    )
++    return saved_meal_to_response(db, user, meal)
++
++
++def list_saved_meals(db: Session, user: PaceUser) -> list[SavedMealResponse]:
++    return [saved_meal_to_response(db, user, meal) for meal in repo.list_saved_meals(db, user.id)]
++
++
++def require_saved_meal(db: Session, user: PaceUser, meal_id: UUID) -> NutritionSavedMeal:
++    meal = repo.get_saved_meal(db, user.id, meal_id)
++    if meal is None:
++        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved meal not found")
++    return meal
++
++
++def get_saved_meal(db: Session, user: PaceUser, meal_id: UUID) -> SavedMealResponse:
++    return saved_meal_to_response(db, user, require_saved_meal(db, user, meal_id))
++
++
++def update_saved_meal(
++    db: Session, user: PaceUser, meal_id: UUID, payload: SavedMealUpdate
++) -> SavedMealResponse:
++    meal = require_saved_meal(db, user, meal_id)
++    if not payload.model_fields_set:
++        return saved_meal_to_response(db, user, meal)
++    items = None
++    if payload.items is not None:
++        items = validate_saved_meal_items(db, user, payload.items)
++    meal = repo.update_saved_meal(
++        db,
++        meal,
++        name=payload.name if "name" in payload.model_fields_set else None,
++        replace_items=items,
++        client_updated_at=payload.client_updated_at,
++    )
++    return saved_meal_to_response(db, user, meal)
++
++
++def delete_saved_meal(db: Session, user: PaceUser, meal_id: UUID) -> None:
++    repo.soft_delete_saved_meal(db, require_saved_meal(db, user, meal_id))
++
++
++def log_saved_meal(
++    db: Session, user: PaceUser, meal_id: UUID, payload: SavedMealLogRequest
++) -> list[NutritionEntryResponse]:
++    meal = require_saved_meal(db, user, meal_id)
++    items = repo.list_saved_meal_items(db, user.id, meal.id)
++    if not items:
++        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Saved meal has no items")
++
++    entries: list[NutritionEntry] = []
++    for item in items:
++        food = require_food(db, user, item.food_id, include_deleted=True)
++        if food.deleted_at is not None:
++            raise HTTPException(
++                status_code=status.HTTP_409_CONFLICT,
++                detail=f"Saved meal contains deleted food '{food.name}'. Update the saved meal first.",
++            )
++        if item.unit != food.basis_unit:
++            raise HTTPException(
++                status_code=status.HTTP_409_CONFLICT,
++                detail=f"Saved meal unit for '{food.name}' no longer matches the food definition",
++            )
++        entry = build_entry_from_food(
++            user_id=user.id,
++            food=food,
++            logged_date=payload.logged_date,
++            meal_type=payload.meal_type,
++            amount=item.amount,
++            unit=item.unit,
++            client_updated_at=payload.client_updated_at,
++        )
++        repo.create_entry(db, entry, commit=False)
++        entries.append(entry)
++
++    db.commit()
++    for entry in entries:
++        db.refresh(entry)
++    return [entry_to_response(entry) for entry in entries]
+diff --git a/postman/Pace_Backend_v0.1.postman_collection.json b/postman/Pace_Backend_v0.1.postman_collection.json
+index d882da2..45abb7c 100644
+--- a/postman/Pace_Backend_v0.1.postman_collection.json
++++ b/postman/Pace_Backend_v0.1.postman_collection.json
+@@ -1,8 +1,8 @@
+ {
+   "info": {
+-    "name": "Pace Backend v0.2",
++    "name": "Pace Backend v0.3",
+     "_postman_id": "pace-backend-v0-1",
+-    "description": "Pace backend health and Profile CRUD.",
++    "description": "Pace backend health, Profile CRUD, and Nutrition API.",
+     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+   },
+   "item": [
+@@ -134,6 +134,400 @@
+           }
+         }
+       ]
++    },
++    {
++      "name": "Nutrition",
++      "item": [
++        {
++          "name": "Upsert Nutrition Goals",
++          "request": {
++            "method": "PUT",
++            "header": [
++              {
++                "key": "Content-Type",
++                "value": "application/json"
++              }
++            ],
++            "url": {
++              "raw": "{{base_url}}/api/v1/nutrition/goals",
++              "host": [
++                "{{base_url}}"
++              ],
++              "path": [
++                "api",
++                "v1",
++                "nutrition",
++                "goals"
++              ]
++            },
++            "body": {
++              "mode": "raw",
++              "raw": "{\n  \"target_calories_kcal\": 2200,\n  \"target_protein_g\": 160,\n  \"target_carbs_g\": 240,\n  \"target_fat_g\": 70,\n  \"target_fiber_g\": 30\n}",
++              "options": {
++                "raw": {
++                  "language": "json"
++                }
++              }
++            }
++          }
++        },
++        {
++          "name": "Create Food",
++          "request": {
++            "method": "POST",
++            "header": [
++              {
++                "key": "Content-Type",
++                "value": "application/json"
++              }
++            ],
++            "url": {
++              "raw": "{{base_url}}/api/v1/nutrition/foods",
++              "host": [
++                "{{base_url}}"
++              ],
++              "path": [
++                "api",
++                "v1",
++                "nutrition",
++                "foods"
++              ]
++            },
++            "body": {
++              "mode": "raw",
++              "raw": "{\n  \"name\": \"Chicken breast\",\n  \"brand\": null,\n  \"basis_amount\": 100,\n  \"basis_unit\": \"g\",\n  \"calories_kcal\": 165,\n  \"protein_g\": 31,\n  \"carbs_g\": 0,\n  \"fat_g\": 3.6,\n  \"fiber_g\": 0,\n  \"preparation_state\": \"cooked\",\n  \"source\": \"custom\",\n  \"is_favorite\": true\n}",
++              "options": {
++                "raw": {
++                  "language": "json"
++                }
++              }
++            }
++          },
++          "event": [
++            {
++              "listen": "test",
++              "script": {
++                "exec": [
++                  "const body = pm.response.json();",
++                  "pm.environment.set('food_id', body.id);"
++                ],
++                "type": "text/javascript"
++              }
++            }
++          ]
++        },
++        {
++          "name": "List Foods",
++          "request": {
++            "method": "GET",
++            "header": [],
++            "url": {
++              "raw": "{{base_url}}/api/v1/nutrition/foods",
++              "host": [
++                "{{base_url}}"
++              ],
++              "path": [
++                "api",
++                "v1",
++                "nutrition",
++                "foods"
++              ]
++            }
++          }
++        },
++        {
++          "name": "Log Food Entry",
++          "request": {
++            "method": "POST",
++            "header": [
++              {
++                "key": "Content-Type",
++                "value": "application/json"
++              }
++            ],
++            "url": {
++              "raw": "{{base_url}}/api/v1/nutrition/entries",
++              "host": [
++                "{{base_url}}"
++              ],
++              "path": [
++                "api",
++                "v1",
++                "nutrition",
++                "entries"
++              ]
++            },
++            "body": {
++              "mode": "raw",
++              "raw": "{\n  \"logged_date\": \"2026-09-05\",\n  \"meal_type\": \"lunch\",\n  \"food_id\": \"{{food_id}}\",\n  \"amount\": 150,\n  \"unit\": \"g\"\n}",
++              "options": {
++                "raw": {
++                  "language": "json"
++                }
++              }
++            }
++          },
++          "event": [
++            {
++              "listen": "test",
++              "script": {
++                "exec": [
++                  "const body = pm.response.json();",
++                  "pm.environment.set('entry_id', body.id);"
++                ],
++                "type": "text/javascript"
++              }
++            }
++          ]
++        },
++        {
++          "name": "Log One-Time Manual Food",
++          "request": {
++            "method": "POST",
++            "header": [
++              {
++                "key": "Content-Type",
++                "value": "application/json"
++              }
++            ],
++            "url": {
++              "raw": "{{base_url}}/api/v1/nutrition/entries",
++              "host": [
++                "{{base_url}}"
++              ],
++              "path": [
++                "api",
++                "v1",
++                "nutrition",
++                "entries"
++              ]
++            },
++            "body": {
++              "mode": "raw",
++              "raw": "{\n  \"logged_date\": \"2026-09-05\",\n  \"meal_type\": \"snack\",\n  \"manual\": {\n    \"name\": \"Restaurant meal\",\n    \"amount\": 1,\n    \"unit\": \"serving\",\n    \"calories_kcal\": 650,\n    \"protein_g\": 30,\n    \"carbs_g\": 70,\n    \"fat_g\": 25,\n    \"fiber_g\": 8\n  }\n}",
++              "options": {
++                "raw": {
++                  "language": "json"
++                }
++              }
++            }
++          }
++        },
++        {
++          "name": "Daily Summary",
++          "request": {
++            "method": "GET",
++            "header": [],
++            "url": {
++              "raw": "{{base_url}}/api/v1/nutrition/daily/2026-09-05",
++              "host": [
++                "{{base_url}}"
++              ],
++              "path": [
++                "api",
++                "v1",
++                "nutrition",
++                "daily",
++                "2026-09-05"
++              ]
++            }
++          }
++        },
++        {
++          "name": "Create Saved Meal",
++          "request": {
++            "method": "POST",
++            "header": [
++              {
++                "key": "Content-Type",
++                "value": "application/json"
++              }
++            ],
++            "url": {
++              "raw": "{{base_url}}/api/v1/nutrition/saved-meals",
++              "host": [
++                "{{base_url}}"
++              ],
++              "path": [
++                "api",
++                "v1",
++                "nutrition",
++                "saved-meals"
++              ]
++            },
++            "body": {
++              "mode": "raw",
++              "raw": "{\n  \"name\": \"Chicken meal\",\n  \"items\": [\n    {\n      \"food_id\": \"{{food_id}}\",\n      \"amount\": 200,\n      \"unit\": \"g\"\n    }\n  ]\n}",
++              "options": {
++                "raw": {
++                  "language": "json"
++                }
++              }
++            }
++          },
++          "event": [
++            {
++              "listen": "test",
++              "script": {
++                "exec": [
++                  "const body = pm.response.json();",
++                  "pm.environment.set('saved_meal_id', body.id);"
++                ],
++                "type": "text/javascript"
++              }
++            }
++          ]
++        },
++        {
++          "name": "Log Saved Meal",
++          "request": {
++            "method": "POST",
++            "header": [
++              {
++                "key": "Content-Type",
++                "value": "application/json"
++              }
++            ],
++            "url": {
++              "raw": "{{base_url}}/api/v1/nutrition/saved-meals/{{saved_meal_id}}/log",
++              "host": [
++                "{{base_url}}"
++              ],
++              "path": [
++                "api",
++                "v1",
++                "nutrition",
++                "saved-meals",
++                "{{saved_meal_id}}",
++                "log"
++              ]
++            },
++            "body": {
++              "mode": "raw",
++              "raw": "{\n  \"logged_date\": \"2026-09-05\",\n  \"meal_type\": \"dinner\"\n}",
++              "options": {
++                "raw": {
++                  "language": "json"
++                }
++              }
++            }
++          }
++        },
++        {
++          "name": "Update Food",
++          "request": {
++            "method": "PATCH",
++            "header": [
++              {
++                "key": "Content-Type",
++                "value": "application/json"
++              }
++            ],
++            "url": {
++              "raw": "{{base_url}}/api/v1/nutrition/foods/{{food_id}}",
++              "host": [
++                "{{base_url}}"
++              ],
++              "path": [
++                "api",
++                "v1",
++                "nutrition",
++                "foods",
++                "{{food_id}}"
++              ]
++            },
++            "body": {
++              "mode": "raw",
++              "raw": "{\n  \"calories_kcal\": 170\n}",
++              "options": {
++                "raw": {
++                  "language": "json"
++                }
++              }
++            }
++          }
++        },
++        {
++          "name": "Get Food",
++          "request": {
++            "method": "GET",
++            "header": [],
++            "url": {
++              "raw": "{{base_url}}/api/v1/nutrition/foods/{{food_id}}",
++              "host": [
++                "{{base_url}}"
++              ],
++              "path": [
++                "api",
++                "v1",
++                "nutrition",
++                "foods",
++                "{{food_id}}"
++              ]
++            }
++          }
++        },
++        {
++          "name": "Delete Entry",
++          "request": {
++            "method": "DELETE",
++            "header": [],
++            "url": {
++              "raw": "{{base_url}}/api/v1/nutrition/entries/{{entry_id}}",
++              "host": [
++                "{{base_url}}"
++              ],
++              "path": [
++                "api",
++                "v1",
++                "nutrition",
++                "entries",
++                "{{entry_id}}"
++              ]
++            }
++          }
++        },
++        {
++          "name": "Delete Saved Meal",
++          "request": {
++            "method": "DELETE",
++            "header": [],
++            "url": {
++              "raw": "{{base_url}}/api/v1/nutrition/saved-meals/{{saved_meal_id}}",
++              "host": [
++                "{{base_url}}"
++              ],
++              "path": [
++                "api",
++                "v1",
++                "nutrition",
++                "saved-meals",
++                "{{saved_meal_id}}"
++              ]
++            }
++          }
++        },
++        {
++          "name": "Delete Food",
++          "request": {
++            "method": "DELETE",
++            "header": [],
++            "url": {
++              "raw": "{{base_url}}/api/v1/nutrition/foods/{{food_id}}",
++              "host": [
++                "{{base_url}}"
++              ],
++              "path": [
++                "api",
++                "v1",
++                "nutrition",
++                "foods",
++                "{{food_id}}"
++              ]
++            }
++          }
++        }
++      ]
+     }
+   ]
+-}
+\ No newline at end of file
++}
+diff --git a/postman/Pace_Local.postman_environment.json b/postman/Pace_Local.postman_environment.json
+index 5445e9a..ae491be 100644
+--- a/postman/Pace_Local.postman_environment.json
++++ b/postman/Pace_Local.postman_environment.json
+@@ -2,7 +2,30 @@
+   "id": "pace-local",
+   "name": "Pace Local",
+   "values": [
+-    {"key": "base_url", "value": "http://127.0.0.1:8000", "type": "default", "enabled": true}
++    {
++      "key": "base_url",
++      "value": "http://127.0.0.1:8000",
++      "type": "default",
++      "enabled": true
++    },
++    {
++      "key": "food_id",
++      "value": "",
++      "type": "default",
++      "enabled": true
++    },
++    {
++      "key": "entry_id",
++      "value": "",
++      "type": "default",
++      "enabled": true
++    },
++    {
++      "key": "saved_meal_id",
++      "value": "",
++      "type": "default",
++      "enabled": true
++    }
+   ],
+   "_postman_variable_scope": "environment"
+ }
+diff --git a/pyproject.toml b/pyproject.toml
+index bb6cedf..ca7258d 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -10,7 +10,7 @@ namespaces = false
+ 
+ [project]
+ name = "pace-backend"
+-version = "0.2.0"
++version = "0.3.0"
+ description = "Backend API for Pace"
+ requires-python = ">=3.12,<3.14"
+ dependencies = [
+diff --git a/tests/test_nutrition.py b/tests/test_nutrition.py
+new file mode 100644
+index 0000000..643c292
+--- /dev/null
++++ b/tests/test_nutrition.py
+@@ -0,0 +1,131 @@
++import uuid
++
++import pytest
++from fastapi.testclient import TestClient
++
++from app.main import app
++
++client = TestClient(app)
++
++
++@pytest.mark.integration
++def test_nutrition_vertical_slice() -> None:
++    suffix = uuid.uuid4().hex[:8]
++    logged_date = "2026-09-05"
++
++    goals = client.put(
++        "/api/v1/nutrition/goals",
++        json={
++            "target_calories_kcal": 2200,
++            "target_protein_g": 160,
++            "target_carbs_g": 240,
++            "target_fat_g": 70,
++            "target_fiber_g": 30,
++        },
++    )
++    assert goals.status_code == 200
++    assert goals.json()["target_protein_g"] == 160
++
++    food = client.post(
++        "/api/v1/nutrition/foods",
++        json={
++            "name": f"Test chicken {suffix}",
++            "basis_amount": 100,
++            "basis_unit": "g",
++            "calories_kcal": 165,
++            "protein_g": 31,
++            "carbs_g": 0,
++            "fat_g": 3.6,
++            "fiber_g": 0,
++            "preparation_state": "cooked",
++            "source": "custom",
++            "is_favorite": True,
++        },
++    )
++    assert food.status_code == 201
++    food_id = food.json()["id"]
++
++    first_entry = client.post(
++        "/api/v1/nutrition/entries",
++        json={
++            "logged_date": logged_date,
++            "meal_type": "lunch",
++            "food_id": food_id,
++            "amount": 150,
++            "unit": "g",
++        },
++    )
++    assert first_entry.status_code == 201
++    assert first_entry.json()["calories_kcal"] == 247.5
++    first_entry_id = first_entry.json()["id"]
++
++    # Changing a reusable food must not rewrite an existing historical entry snapshot.
++    changed_food = client.patch(
++        f"/api/v1/nutrition/foods/{food_id}",
++        json={"calories_kcal": 170},
++    )
++    assert changed_food.status_code == 200
++
++    historical_entry = client.get(f"/api/v1/nutrition/entries/{first_entry_id}")
++    assert historical_entry.status_code == 200
++    assert historical_entry.json()["calories_kcal"] == 247.5
++
++    # Editing the logged amount scales its own snapshot, not the now-changed food definition.
++    resized_entry = client.patch(
++        f"/api/v1/nutrition/entries/{first_entry_id}",
++        json={"amount": 300},
++    )
++    assert resized_entry.status_code == 200
++    assert resized_entry.json()["calories_kcal"] == 495.0
++
++    saved_meal = client.post(
++        "/api/v1/nutrition/saved-meals",
++        json={
++            "name": f"Test saved meal {suffix}",
++            "items": [{"food_id": food_id, "amount": 200, "unit": "g"}],
++        },
++    )
++    assert saved_meal.status_code == 201
++    saved_meal_id = saved_meal.json()["id"]
++    assert saved_meal.json()["totals"]["calories_kcal"] == 340.0
++
++    # Saved meals reference foods, so a future log uses the current food definition.
++    logged_meal = client.post(
++        f"/api/v1/nutrition/saved-meals/{saved_meal_id}/log",
++        json={"logged_date": logged_date, "meal_type": "dinner"},
++    )
++    assert logged_meal.status_code == 201
++    assert logged_meal.json()[0]["calories_kcal"] == 340.0
++    logged_meal_entry_id = logged_meal.json()[0]["id"]
++
++    manual_entry = client.post(
++        "/api/v1/nutrition/entries",
++        json={
++            "logged_date": logged_date,
++            "meal_type": "snack",
++            "manual": {
++                "name": f"One-time food {suffix}",
++                "amount": 1,
++                "unit": "serving",
++                "calories_kcal": 300,
++                "protein_g": 10,
++                "carbs_g": 35,
++                "fat_g": 12,
++            },
++        },
++    )
++    assert manual_entry.status_code == 201
++    manual_entry_id = manual_entry.json()["id"]
++    assert manual_entry.json()["source_food_id"] is None
++
++    summary = client.get(f"/api/v1/nutrition/daily/{logged_date}")
++    assert summary.status_code == 200
++    summary_ids = {entry["id"] for entry in summary.json()["entries"]}
++    assert {first_entry_id, logged_meal_entry_id, manual_entry_id}.issubset(summary_ids)
++
++    # Clean up the user-owned test records. Goals remain as the dev user's current test goals.
++    assert client.delete(f"/api/v1/nutrition/entries/{first_entry_id}").status_code == 204
++    assert client.delete(f"/api/v1/nutrition/entries/{logged_meal_entry_id}").status_code == 204
++    assert client.delete(f"/api/v1/nutrition/entries/{manual_entry_id}").status_code == 204
++    assert client.delete(f"/api/v1/nutrition/saved-meals/{saved_meal_id}").status_code == 204
++    assert client.delete(f"/api/v1/nutrition/foods/{food_id}").status_code == 204
