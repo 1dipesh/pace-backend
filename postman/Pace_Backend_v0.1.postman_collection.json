@@ -1,0 +1,22 @@
+{
+  "info": {
+    "name": "Pace Backend v0.1",
+    "_postman_id": "pace-backend-v0-1",
+    "description": "Initial Pace backend health checks.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Root",
+      "request": {"method": "GET", "header": [], "url": "{{base_url}}/"}
+    },
+    {
+      "name": "Health",
+      "request": {"method": "GET", "header": [], "url": "{{base_url}}/health"}
+    },
+    {
+      "name": "Database Health",
+      "request": {"method": "GET", "header": [], "url": "{{base_url}}/health/database"}
+    }
+  ]
+}
