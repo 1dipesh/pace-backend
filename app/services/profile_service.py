@@ -1,3 +1,4 @@
+from sqlalchemy import select
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -34,6 +35,7 @@ def to_response(profile: PaceProfile) -> PaceProfileResponse:
 
 
 def create_profile(db: Session, user: PaceUser, payload: PaceProfileCreate) -> PaceProfileResponse:
+    db.execute(select(PaceUser.id).where(PaceUser.id == user.id).with_for_update()).scalar_one()
     try:
         profile = profile_repository.create_profile(db, user.id, payload)
     except ValueError as exc:
@@ -58,6 +60,7 @@ def update_profile(
     user: PaceUser,
     payload: PaceProfileUpdate,
 ) -> PaceProfileResponse:
+    db.execute(select(PaceUser.id).where(PaceUser.id == user.id).with_for_update()).scalar_one()
     profile = profile_repository.get_profile(db, user.id)
     if profile is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
@@ -80,6 +83,7 @@ def update_profile(
 
 
 def delete_profile(db: Session, user: PaceUser) -> None:
+    db.execute(select(PaceUser.id).where(PaceUser.id == user.id).with_for_update()).scalar_one()
     profile = profile_repository.get_profile(db, user.id)
     if profile is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")

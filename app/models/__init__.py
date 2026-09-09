@@ -51,3 +51,5 @@ __all__ = [
     "TrainingTemplateSet",
     "PaceUser",
 ]
+
+from app.models.sync import SyncReceipt  # noqa: F401
