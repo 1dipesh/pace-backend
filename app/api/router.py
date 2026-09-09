@@ -19,3 +19,6 @@ api_router.include_router(alcohol_router)
 
 from app.api.routes.sync import router as sync_router
 api_router.include_router(sync_router)
+
+from app.api.routes.nutrition_sync import router as nutrition_sync_router
+api_router.include_router(nutrition_sync_router)

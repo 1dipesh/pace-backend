@@ -24,7 +24,9 @@ from app.schemas.nutrition import (
 )
 from app.services import nutrition_service
 
-router = APIRouter(prefix="/api/v1/nutrition", tags=["nutrition"])
+from app.services.nutrition_sync_service import legacy_write_guard
+
+router = APIRouter(prefix="/api/v1/nutrition", tags=["nutrition"], dependencies=[Depends(legacy_write_guard)])
 
 
 @router.get("/goals", response_model=NutritionGoalsResponse)
