@@ -20,7 +20,9 @@ from app.schemas.endurance import (
 )
 from app.services import endurance_service
 
-router = APIRouter(prefix="/api/v1/training", tags=["cardio & hybrid"])
+from app.services.training_sync_service import legacy_guard
+
+router = APIRouter(dependencies=[Depends(legacy_guard)], prefix="/api/v1/training", tags=["cardio & hybrid"])
 
 
 @router.post("/cardio/activities", response_model=CardioActivityResponse, status_code=status.HTTP_201_CREATED)

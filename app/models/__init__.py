@@ -55,3 +55,5 @@ __all__ = [
 from app.models.sync import SyncReceipt  # noqa: F401
 
 from app.models.nutrition_sync import NutritionSyncRecord  # noqa: F401
+
+from app.models.training_sync import TrainingSyncRecord  # noqa: F401

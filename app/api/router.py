@@ -22,3 +22,6 @@ api_router.include_router(sync_router)
 
 from app.api.routes.nutrition_sync import router as nutrition_sync_router
 api_router.include_router(nutrition_sync_router)
+
+from app.api.routes.training_sync import router as training_sync_router
+api_router.include_router(training_sync_router)

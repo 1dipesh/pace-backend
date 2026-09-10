@@ -22,7 +22,9 @@ from app.schemas.training import (
 )
 from app.services import training_service
 
-router = APIRouter(prefix="/api/v1/training", tags=["training"])
+from app.services.training_sync_service import legacy_guard
+
+router = APIRouter(dependencies=[Depends(legacy_guard)], prefix="/api/v1/training", tags=["training"])
 
 
 @router.get("/settings", response_model=TrainingSettingsResponse)

@@ -1,3 +1,4 @@
+from datetime import timezone
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -252,7 +253,15 @@ def update_session(db: Session, user: PaceUser, session_id: UUID, payload: Train
     changes = payload.model_dump(exclude_unset=True)
     if not changes:
         return _session_response(db, user, session)
-    if payload.completed_at is not None and payload.completed_at < session.started_at:
+    # SQLite drops timezone information when loading a datetime; PostgreSQL
+    # retains it. Interpret legacy naive timestamps as UTC consistently.
+    started_at = session.started_at
+    if started_at.tzinfo is None:
+        started_at = started_at.replace(tzinfo=timezone.utc)
+    completed_at = payload.completed_at
+    if completed_at is not None and completed_at.tzinfo is None:
+        completed_at = completed_at.replace(tzinfo=timezone.utc)
+    if completed_at is not None and completed_at < started_at:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="completed_at cannot be earlier than started_at",
