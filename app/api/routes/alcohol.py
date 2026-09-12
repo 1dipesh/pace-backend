@@ -1,3 +1,4 @@
+from app.services.alcohol_sync_service import legacy_guard
 from datetime import date
 from uuid import UUID
 
@@ -29,7 +30,7 @@ from app.schemas.alcohol import (
 )
 from app.services import alcohol_service
 
-router = APIRouter(prefix="/api/v1/alcohol", tags=["alcohol"])
+router = APIRouter(dependencies=[Depends(legacy_guard)], prefix="/api/v1/alcohol", tags=["alcohol"])
 
 
 @router.post("/sessions", response_model=AlcoholSessionResponse, status_code=status.HTTP_201_CREATED)
