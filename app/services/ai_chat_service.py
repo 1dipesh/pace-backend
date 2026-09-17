@@ -4,6 +4,7 @@ from collections import defaultdict, deque
 import base64
 import binascii
 import json
+import logging
 from datetime import datetime, timezone
 from threading import Lock
 from uuid import UUID
@@ -37,11 +38,12 @@ EMERGENCY_TERMS = (
 )
 
 PLAN_LIMITS: dict[str, int | None] = {"beta": None, "free": 30, "pro": 1000}
+logger = logging.getLogger(__name__)
 
 FOOD_PHOTO_SCHEMA = {
     "type": "object", "additionalProperties": False,
     "properties": {
-        "items": {"type": "array", "minItems": 0, "maxItems": 12, "items": {
+        "items": {"type": "array", "items": {
             "type": "object", "additionalProperties": False,
             "properties": {
                 "name": {"type": "string"}, "portion_description": {"type": "string"},
@@ -102,7 +104,7 @@ class PaceAiProvider:
             ]}],
             text={"format": {"type": "json_schema", "name": "food_photo_analysis",
                               "strict": True, "schema": FOOD_PHOTO_SCHEMA}},
-            max_output_tokens=settings.ai_max_output_tokens,
+            max_output_tokens=max(settings.ai_max_output_tokens, 1400),
         )
         usage = response.usage
         return (json.loads(response.output_text),
@@ -289,6 +291,7 @@ def analyze_food_photo(db: Session, user: PaceUser, image_data_url: str, provide
         raise
     except (APIConnectionError, APITimeoutError, RateLimitError, APIError, RuntimeError,
             KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        logger.exception("Food photo provider request failed (%s)", type(exc).__name__)
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
                             "Food photo analysis is temporarily unavailable") from exc
     db.add(AiUsage(user_id=user.id, model=settings.openai_model, status="completed",
