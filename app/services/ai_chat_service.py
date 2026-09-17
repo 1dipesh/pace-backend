@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from collections import defaultdict, deque
+import base64
+import binascii
+import json
 from datetime import datetime, timezone
 from threading import Lock
 from uuid import UUID
@@ -35,6 +38,25 @@ EMERGENCY_TERMS = (
 
 PLAN_LIMITS: dict[str, int | None] = {"beta": None, "free": 30, "pro": 1000}
 
+FOOD_PHOTO_SCHEMA = {
+    "type": "object", "additionalProperties": False,
+    "properties": {
+        "items": {"type": "array", "minItems": 0, "maxItems": 12, "items": {
+            "type": "object", "additionalProperties": False,
+            "properties": {
+                "name": {"type": "string"}, "portion_description": {"type": "string"},
+                "calories": {"type": "number"}, "protein": {"type": "number"},
+                "carbs": {"type": "number"}, "fat": {"type": "number"},
+                "fiber": {"type": ["number", "null"]},
+                "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+            },
+            "required": ["name", "portion_description", "calories", "protein", "carbs", "fat", "fiber", "confidence"],
+        }},
+        "notes": {"type": "string"},
+    },
+    "required": ["items", "notes"],
+}
+
 
 class PaceAiProvider:
     def __init__(self, api_key: str | None = None):
@@ -45,6 +67,13 @@ class PaceAiProvider:
 
     def moderated(self, text: str) -> bool:
         response = self.client.moderations.create(model="omni-moderation-latest", input=text)
+        return bool(response.results[0].flagged)
+
+    def image_moderated(self, image_data_url: str) -> bool:
+        response = self.client.moderations.create(
+            model="omni-moderation-latest",
+            input=[{"type": "image_url", "image_url": {"url": image_data_url}}],
+        )
         return bool(response.results[0].flagged)
 
     def respond(self, messages: list[dict[str, str]]) -> tuple[str, int, int]:
@@ -60,6 +89,25 @@ class PaceAiProvider:
             int(getattr(usage, "input_tokens", 0) or 0),
             int(getattr(usage, "output_tokens", 0) or 0),
         )
+
+    def analyze_food_photo(self, image_data_url: str) -> tuple[dict, int, int]:
+        response = self.client.responses.create(
+            model=settings.openai_model,
+            instructions=("Identify visible foods and estimate the portion already shown. Return calories and grams "
+                          "of protein, carbohydrates, fat and fiber for each item. Be conservative and state uncertainty. "
+                          "Never identify a person or infer health conditions. If this is not food, return no items."),
+            input=[{"role": "user", "content": [
+                {"type": "input_text", "text": "Estimate this meal for review before nutrition logging."},
+                {"type": "input_image", "image_url": image_data_url, "detail": "low"},
+            ]}],
+            text={"format": {"type": "json_schema", "name": "food_photo_analysis",
+                              "strict": True, "schema": FOOD_PHOTO_SCHEMA}},
+            max_output_tokens=settings.ai_max_output_tokens,
+        )
+        usage = response.usage
+        return (json.loads(response.output_text),
+                int(getattr(usage, "input_tokens", 0) or 0),
+                int(getattr(usage, "output_tokens", 0) or 0))
 
 
 _rate_events: dict[UUID, deque[float]] = defaultdict(deque)
@@ -189,3 +237,62 @@ def send_message(db: Session, user: PaceUser, message: str, conversation_id: UUI
                    status=usage_status, input_tokens=input_tokens, output_tokens=output_tokens))
     db.commit(); db.refresh(conversation); db.refresh(assistant)
     return conversation, assistant, plan_status(db, user), safety_intervened
+
+
+def _validated_image_data_url(value: str) -> str:
+    try:
+        header, encoded = value.split(",", 1)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid image") from exc
+    if header not in ("data:image/jpeg;base64", "data:image/png;base64", "data:image/webp;base64"):
+        raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Use a JPEG, PNG or WebP image")
+    try:
+        raw = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Invalid image") from exc
+    if not raw or len(raw) > settings.ai_max_photo_bytes:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                            f"Image must be smaller than {settings.ai_max_photo_bytes // 1_000_000} MB")
+    signatures = {
+        "data:image/jpeg;base64": raw.startswith(b"\xff\xd8\xff"),
+        "data:image/png;base64": raw.startswith(b"\x89PNG\r\n\x1a\n"),
+        "data:image/webp;base64": raw.startswith(b"RIFF") and raw[8:12] == b"WEBP",
+    }
+    if not signatures[header]:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Image contents do not match its file type")
+    return value
+
+
+def analyze_food_photo(db: Session, user: PaceUser, image_data_url: str, provider: PaceAiProvider) -> dict:
+    _rate_limit(user.id)
+    _ensure_entitled(db, user)
+    image = _validated_image_data_url(image_data_url)
+    try:
+        if provider.image_moderated(image):
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
+                                "This image cannot be analyzed")
+        result, input_tokens, output_tokens = provider.analyze_food_photo(image)
+        items = result.get("items", [])
+        if not isinstance(items, list) or len(items) > 12:
+            raise RuntimeError("Invalid food analysis")
+        clean_items = [{
+            "name": str(item["name"])[:120],
+            "portion_description": str(item["portion_description"])[:160],
+            "calories": max(0, min(5000, float(item["calories"]))),
+            "protein": max(0, min(1000, float(item["protein"]))),
+            "carbs": max(0, min(1000, float(item["carbs"]))),
+            "fat": max(0, min(1000, float(item["fat"]))),
+            "fiber": None if item.get("fiber") is None else max(0, min(500, float(item["fiber"]))),
+            "confidence": item["confidence"] if item.get("confidence") in ("low", "medium", "high") else "low",
+        } for item in items]
+    except HTTPException:
+        raise
+    except (APIConnectionError, APITimeoutError, RateLimitError, APIError, RuntimeError,
+            KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE,
+                            "Food photo analysis is temporarily unavailable") from exc
+    db.add(AiUsage(user_id=user.id, model=settings.openai_model, status="completed",
+                   input_tokens=input_tokens, output_tokens=output_tokens))
+    db.commit()
+    return {"items": clean_items, "notes": str(result.get("notes", ""))[:500],
+            "plan": plan_status(db, user)}

@@ -43,3 +43,24 @@ class AiChatResponse(BaseModel):
     message: AiMessageResponse
     plan: AiPlanResponse
     safety_intervened: bool = False
+
+
+class FoodPhotoRequest(BaseModel):
+    image_data_url: str = Field(min_length=32)
+
+
+class FoodPhotoItem(BaseModel):
+    name: str
+    portion_description: str
+    calories: float = Field(ge=0, le=5000)
+    protein: float = Field(ge=0, le=1000)
+    carbs: float = Field(ge=0, le=1000)
+    fat: float = Field(ge=0, le=1000)
+    fiber: float | None = Field(default=None, ge=0, le=500)
+    confidence: Literal["low", "medium", "high"]
+
+
+class FoodPhotoResponse(BaseModel):
+    items: list[FoodPhotoItem]
+    notes: str
+    plan: AiPlanResponse

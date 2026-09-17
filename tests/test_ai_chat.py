@@ -15,6 +15,16 @@ class FakeAiProvider:
     def respond(self, messages):
         return f"Safe answer to: {messages[-1]['content']}", 12, 8
 
+    def analyze_food_photo(self, image_data_url):
+        assert image_data_url.startswith("data:image/jpeg;base64,")
+        return {"items": [{"name": "Rice", "portion_description": "about 1 cup",
+                            "calories": 205, "protein": 4.3, "carbs": 45,
+                            "fat": 0.4, "fiber": 0.6, "confidence": "medium"}],
+                "notes": "Review the portion before logging."}, 20, 15
+
+    def image_moderated(self, image_data_url):
+        return False
+
 
 def setup_module():
     app.dependency_overrides[get_ai_provider] = lambda: FakeAiProvider()
@@ -65,3 +75,17 @@ def test_chat_requires_authentication_and_rejects_oversized_input():
     assert client.post("/api/v1/ai/chat", json={"message": "Hello"}).status_code == 401
     response = client.post("/api/v1/ai/chat", headers=A, json={"message": "x" * 2001})
     assert response.status_code == 422
+
+
+def test_food_photo_is_authenticated_validated_and_metered():
+    image = "data:image/jpeg;base64,/9j/2TAwMDAwMDAwMDAwMDAwMDAwMDAw"
+    response = client.post("/api/v1/ai/food-photo", headers=A,
+                           json={"image_data_url": image})
+    assert response.status_code == 200
+    assert response.json()["items"][0]["name"] == "Rice"
+    assert response.json()["items"][0]["confidence"] == "medium"
+    assert response.json()["plan"]["used_this_month"] >= 1
+    assert client.post("/api/v1/ai/food-photo", json={"image_data_url": image}).status_code == 401
+    invalid = client.post("/api/v1/ai/food-photo", headers=A,
+                          json={"image_data_url": "data:image/gif;base64,R0lGODlhMDAwMDAwMDAwMDAw"})
+    assert invalid.status_code == 415
