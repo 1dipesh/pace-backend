@@ -57,5 +57,6 @@ from app.models.sync import SyncReceipt  # noqa: F401
 from app.models.nutrition_sync import NutritionSyncRecord  # noqa: F401
 
 from app.models.training_sync import TrainingSyncRecord  # noqa: F401
+from app.models.ai_chat import AiConversation, AiMessage, AiUsage  # noqa: F401
 
 from app.models.alcohol_sync import AlcoholSyncRecord  # noqa: F401

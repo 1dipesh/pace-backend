@@ -25,6 +25,7 @@ from app.models.training import (
 )
 from app.models.training_sync import TrainingSyncRecord
 from app.models.user import PaceUser
+from app.models.ai_chat import AiConversation, AiMessage, AiUsage
 
 
 EXPORT_MODELS = (
@@ -54,11 +55,17 @@ EXPORT_MODELS = (
     NutritionSyncRecord,
     TrainingSyncRecord,
     AlcoholSyncRecord,
+    AiConversation,
+    AiMessage,
+    AiUsage,
 )
 
 # Children precede parents so deletion works with both PostgreSQL and SQLite,
 # including the intentional RESTRICT foreign keys used by saved records.
 DELETE_MODELS = (
+    AiMessage,
+    AiUsage,
+    AiConversation,
     TrainingSet,
     TrainingSessionExercise,
     TrainingTemplateSet,

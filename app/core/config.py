@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = "Pace API"
     app_env: str = "local"
-    app_version: str = "0.8.3"
+    app_version: str = "0.10.0"
     api_v1_prefix: str = "/api/v1"
     database_url: str = "postgresql+psycopg://pace:pace@localhost:5432/pace"
     supabase_url: str | None = None
@@ -14,6 +14,13 @@ class Settings(BaseSettings):
     auth_jwt_algorithms: list[str] = ["ES256", "RS256"]
     auth_clock_skew_seconds: int = 30
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-5-mini"
+    ai_beta_unlimited: bool = True
+    ai_requests_per_minute: int = 10
+    ai_max_input_chars: int = 2000
+    ai_max_output_tokens: int = 700
+    ai_history_messages: int = 20
 
     model_config = SettingsConfigDict(
         env_file=".env",
