@@ -7,7 +7,9 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.db.session import get_db
 from app.models.user import PaceUser
-from app.schemas.ai_chat import AiChatResponse, AiConversationResponse, AiConversationSummary, AiMessageCreate, AiPlanResponse
+from app.schemas.ai_chat import (AiChatResponse, AiConversationResponse,
+    AiConversationSummary, AiMessageCreate, AiPlanResponse, FoodPhotoRequest,
+    FoodPhotoResponse)
 from app.services import ai_chat_service
 
 router = APIRouter(prefix="/api/v1/ai", tags=["pace ai"])
@@ -44,3 +46,11 @@ def chat(payload: AiMessageCreate, user: Annotated[PaceUser, Depends(get_current
          provider: Annotated[ai_chat_service.PaceAiProvider, Depends(get_ai_provider)], db: Session = Depends(get_db)):
     conversation, message, plan, safety = ai_chat_service.send_message(db, user, payload.message, payload.conversation_id, provider)
     return {"conversation": conversation, "message": message, "plan": plan, "safety_intervened": safety}
+
+
+@router.post("/food-photo", response_model=FoodPhotoResponse)
+def food_photo(payload: FoodPhotoRequest,
+               user: Annotated[PaceUser, Depends(get_current_user)],
+               provider: Annotated[ai_chat_service.PaceAiProvider, Depends(get_ai_provider)],
+               db: Session = Depends(get_db)):
+    return ai_chat_service.analyze_food_photo(db, user, payload.image_data_url, provider)

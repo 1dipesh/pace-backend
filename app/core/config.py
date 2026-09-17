@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = "Pace API"
     app_env: str = "local"
-    app_version: str = "0.10.0"
+    app_version: str = "0.11.0"
     api_v1_prefix: str = "/api/v1"
     database_url: str = "postgresql+psycopg://pace:pace@localhost:5432/pace"
     supabase_url: str | None = None
@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     ai_max_input_chars: int = 2000
     ai_max_output_tokens: int = 700
     ai_history_messages: int = 20
+    ai_max_photo_bytes: int = 5_000_000
 
     model_config = SettingsConfigDict(
         env_file=".env",
