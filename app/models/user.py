@@ -17,6 +17,7 @@ class PaceUser(TimestampMixin, Base):
     email: Mapped[str | None] = mapped_column(String(320), index=True, nullable=True)
     display_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    ai_plan: Mapped[str] = mapped_column(String(20), default="beta", server_default="beta", nullable=False)
 
     profile = relationship(
         "PaceProfile",
