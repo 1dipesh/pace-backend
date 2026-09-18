@@ -9,6 +9,7 @@ from app.api.routes.nutrition import router as nutrition_router
 from app.api.routes.profile import router as profile_router
 from app.api.routes.training import router as training_router
 from app.api.routes.ai_chat import router as ai_chat_router
+from app.api.routes.product_lookup import router as product_lookup_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
@@ -20,6 +21,7 @@ api_router.include_router(training_router)
 api_router.include_router(endurance_router)
 api_router.include_router(alcohol_router)
 api_router.include_router(ai_chat_router)
+api_router.include_router(product_lookup_router)
 
 from app.api.routes.sync import router as sync_router
 api_router.include_router(sync_router)
